@@ -3,48 +3,57 @@ package com.supermarkets.structures.bplus;
 import com.supermarkets.pojo.Product;
 import com.supermarkets.structures.listas.ListaEnlazada;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class NodoBPlus {
-    private final int m;
-    private boolean hoja;
-    private final List<String> claves;
-    private final List<NodoBPlus> ramas;
-    private final List<ListaEnlazada> valores;
-    private NodoBPlus siguiente;
-    private int dotId;
+    protected String[] claves;
+    protected NodoBPlus[] ramas;
+    protected ListaEnlazada[] valores;
+    protected NodoBPlus siguiente;
+    protected boolean isHoja;
+    protected int cuenta;
+    protected int m;
 
     public NodoBPlus(int orden) {
         this(orden, false);
     }
 
     public NodoBPlus(int orden, boolean hoja) {
+        this.isHoja = hoja;
+        this.cuenta = 0;
         this.m = orden;
-        this.hoja = hoja;
-        this.claves = new ArrayList<>();
-        this.ramas = new ArrayList<>();
-        this.valores = new ArrayList<>();
+        this.claves = new String[m - 1];
+        this.ramas = new NodoBPlus[m];
+        this.valores = new ListaEnlazada[m - 1];
         this.siguiente = null;
-        this.dotId = 0;
+
+        for (int i = 0; i < m - 1; i++) {
+            claves[i] = "";
+            valores[i] = null;
+        }
+
+        for (int i = 0; i < m; i++) {
+            ramas[i] = null;
+        }
     }
 
     public String Oclave(int i) {
-        return claves.get(i);
+        if (i >= 0 && i < cuenta) {
+            return claves[i];
+        }
+        return "";
     }
 
     public NodoBPlus Orama(int i) {
-        if (i < 0 || i >= ramas.size()) {
+        if (i < 0 || i > cuenta) {
             return null;
         }
-        return ramas.get(i);
+        return ramas[i];
     }
 
     public ListaEnlazada Ovalor(int i) {
-        if (!hoja || i < 0 || i >= valores.size()) {
+        if (!isHoja || i < 0 || i >= cuenta) {
             return null;
         }
-        return valores.get(i);
+        return valores[i];
     }
 
     public NodoBPlus OramaSiguiente() {
@@ -52,11 +61,11 @@ public class NodoBPlus {
     }
 
     public boolean esHoja() {
-        return hoja;
+        return isHoja;
     }
 
     public int Ocuenta() {
-        return claves.size();
+        return cuenta;
     }
 
     public int Oorden() {
@@ -64,24 +73,21 @@ public class NodoBPlus {
     }
 
     public void Pclave(int i, String clave) {
-        while (claves.size() <= i) {
-            claves.add("");
+        if (i >= 0 && i < m - 1) {
+            claves[i] = clave;
         }
-        claves.set(i, clave);
     }
 
     public void Prama(int i, NodoBPlus p) {
-        while (ramas.size() <= i) {
-            ramas.add(null);
+        if (i >= 0 && i < m) {
+            ramas[i] = p;
         }
-        ramas.set(i, p);
     }
 
     public void Pvalor(int i, ListaEnlazada lista) {
-        while (valores.size() <= i) {
-            valores.add(null);
+        if (i >= 0 && i < m - 1 && isHoja) {
+            valores[i] = lista;
         }
-        valores.set(i, lista);
     }
 
     public void PramaSiguiente(NodoBPlus p) {
@@ -89,25 +95,20 @@ public class NodoBPlus {
     }
 
     public void Pcuenta(int valor) {
-        while (claves.size() > valor) {
-            claves.remove(claves.size() - 1);
-            if (hoja && valores.size() > claves.size()) {
-                valores.remove(valores.size() - 1);
-            }
-        }
+        this.cuenta = valor;
     }
 
     public boolean nodoLLeno() {
-        return claves.size() >= m - 1;
+        return cuenta == m - 1;
     }
 
     public boolean nodoSemiVacio() {
-        return claves.size() <= (m / 2);
+        return cuenta <= (m / 2);
     }
 
     public int buscarPosicion(String clave) {
         int pos = 0;
-        while (pos < claves.size() && claves.get(pos).compareTo(clave) < 0) {
+        while (pos < cuenta && claves[pos].compareTo(clave) < 0) {
             pos++;
         }
         return pos;
@@ -117,29 +118,5 @@ public class NodoBPlus {
         if (lista != null) {
             lista.insertar(producto);
         }
-    }
-
-    public int OdotId() {
-        return dotId;
-    }
-
-    public void PdotId(int id) {
-        this.dotId = id;
-    }
-
-    public List<String> getClaves() {
-        return claves;
-    }
-
-    public List<NodoBPlus> getRamas() {
-        return ramas;
-    }
-
-    public List<ListaEnlazada> getValores() {
-        return valores;
-    }
-
-    public void setHoja(boolean hoja) {
-        this.hoja = hoja;
     }
 }

@@ -2,100 +2,57 @@ package com.supermarkets.structures.b;
 
 import com.supermarkets.pojo.Product;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class NodoB {
-    private final int orden;
-    private final List<Product> claves;
-    private final List<NodoB> ramas;
-    private boolean hoja;
-    private int dotId;
+    protected Product[] claves;
+    protected NodoB[] ramas;
+    protected int cuenta;
 
-    public NodoB(int orden) {
-        this(orden, true);
+    private int m;
+
+    public NodoB(int grado) {
+        this.m = grado;
+        this.cuenta = 0;
+        claves = new Product[grado * 2];
+        ramas = new NodoB[(grado * 2) + 1];
+
+        for(int k = 0; k < grado*2; k++) {
+            claves[k] = null;
+        }
+
+        for(int k = 0; k <= grado*2; k++) {
+            ramas[k] = null;
+        }
     }
 
-    public NodoB(int orden, boolean hoja) {
-        this.orden = orden;
-        this.hoja = hoja;
-        this.claves = new ArrayList<>();
-        this.ramas = new ArrayList<>();
-        this.dotId = 0;
-    }
-
-    public boolean nodoLLeno() {
-        return claves.size() >= orden - 1;
+    public boolean nodoLleno() {
+        return cuenta == m - 1;
     }
 
     public boolean nodoSemiVacio() {
-        return hoja;
+        return ramas[0] == null;
     }
-
+    
     public Product Oclave(int i) {
-        return claves.get(i - 1);
+        return claves[i];
     }
 
-    public void Pclave(int i, Product producto) {
-        int index = i - 1;
-        while (claves.size() <= index) {
-            claves.add(null);
-        }
-        claves.set(index, producto);
+    public void Pclave(int i, Product clave) {
+        claves[i] = clave;
     }
 
     public NodoB Orama(int i) {
-        if (i < 0 || i >= ramas.size()) {
-            return null;
-        }
-        return ramas.get(i);
+        return ramas[i];
     }
 
     public void Prama(int i, NodoB p) {
-        while (ramas.size() <= i) {
-            ramas.add(null);
-        }
-        ramas.set(i, p);
+        ramas[i] = p;
     }
 
     public int Ocuenta() {
-        return claves.size();
+        return cuenta;
     }
 
     public void Pcuenta(int valor) {
-        while (claves.size() > valor) {
-            claves.remove(claves.size() - 1);
-        }
-        while (claves.size() < valor) {
-            claves.add(null);
-        }
-    }
-
-    public int OdotId() {
-        return dotId;
-    }
-
-    public void PdotId(int id) {
-        this.dotId = id;
-    }
-
-    public int getOrden() {
-        return orden;
-    }
-
-    public List<Product> getClaves() {
-        return claves;
-    }
-
-    public List<NodoB> getRamas() {
-        return ramas;
-    }
-
-    public boolean esHoja() {
-        return hoja;
-    }
-
-    public void setHoja(boolean hoja) {
-        this.hoja = hoja;
+        cuenta = valor;
     }
 }
