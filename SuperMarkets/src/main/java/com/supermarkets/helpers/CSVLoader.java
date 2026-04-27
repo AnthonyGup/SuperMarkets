@@ -3,33 +3,31 @@ package com.supermarkets.helpers;
 import com.supermarkets.pojo.Product;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 public class CSVLoader {
     private final String delimiter;
-    private final String logFile;
 
     private String[] loadedBarcodes;
     private int loadedBarcodesCount;
 
+    private String[] errorDetails;
+    private int errorDetailsCount;
+
     private LoadStats stats;
 
     public CSVLoader() {
-        this("error.log", ",");
+        this(null, ",");
     }
 
     public CSVLoader(String logFilePath, String delimiter) {
         this.delimiter = (delimiter == null || delimiter.isEmpty()) ? "," : delimiter;
-        this.logFile = (logFilePath == null || logFilePath.isBlank()) ? "error.log" : logFilePath;
         this.loadedBarcodes = new String[64];
         this.loadedBarcodesCount = 0;
+        this.errorDetails = new String[64];
+        this.errorDetailsCount = 0;
         this.stats = new LoadStats();
-        clearLogFile();
     }
 
     public Product[] loadProducts(String filename, boolean hasHeader) {
@@ -38,6 +36,7 @@ public class CSVLoader {
 
         stats = new LoadStats();
         loadedBarcodesCount = 0;
+        errorDetailsCount = 0;
 
         try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
             int lineNumber = 0;
@@ -61,7 +60,7 @@ public class CSVLoader {
 
                 String[] fields = splitLineWithQuotes(line, delimiter.charAt(0));
                 if (fields.length < 7) {
-                    logError("Numero insuficiente de campos. Se esperaban 7, se encontraron " + fields.length, lineNumber);
+                    registerError("Numero insuficiente de campos. Se esperaban 7, se encontraron " + fields.length, lineNumber);
                     stats.erroresLinea++;
                     continue;
                 }
@@ -76,37 +75,37 @@ public class CSVLoader {
                     String stockStr = removeQuotes(fields[6]);
 
                     if (nombre.isEmpty()) {
-                        logError("Campo 'Nombre' vacio", lineNumber);
+                        registerError("Campo 'Nombre' vacio", lineNumber);
                         stats.erroresOtros++;
                         continue;
                     }
 
                     if (codigoBarra.isEmpty()) {
-                        logError("Campo 'CodigoBarra' vacio", lineNumber);
+                        registerError("Campo 'CodigoBarra' vacio", lineNumber);
                         stats.erroresOtros++;
                         continue;
                     }
 
                     if (!isValidISODate(fechaCaducidad)) {
-                        logError("Fecha de caducidad invalida: '" + fechaCaducidad + "'. Formato esperado: YYYY-MM-DD", lineNumber);
+                        registerError("Fecha de caducidad invalida: '" + fechaCaducidad + "'. Formato esperado: YYYY-MM-DD", lineNumber);
                         stats.erroresFecha++;
                         continue;
                     }
 
                     if (!isValidDouble(precioStr)) {
-                        logError("Precio invalido: '" + precioStr + "' no es un numero valido", lineNumber);
+                        registerError("Precio invalido: '" + precioStr + "' no es un numero valido", lineNumber);
                         stats.erroresNumeros++;
                         continue;
                     }
 
                     if (!isValidInteger(stockStr)) {
-                        logError("Stock invalido: '" + stockStr + "' no es un numero entero valido", lineNumber);
+                        registerError("Stock invalido: '" + stockStr + "' no es un numero entero valido", lineNumber);
                         stats.erroresNumeros++;
                         continue;
                     }
 
                     if (!isUniqueBarcode(codigoBarra)) {
-                        logError("Codigo de barra duplicado: '" + codigoBarra + "'. Producto omitido.", lineNumber);
+                        registerError("Codigo de barra duplicado: '" + codigoBarra + "'. Producto omitido.", lineNumber);
                         stats.erroresDuplicados++;
                         continue;
                     }
@@ -126,29 +125,15 @@ public class CSVLoader {
                     products[productsCount++] = product;
                     stats.productosExitosos++;
                 } catch (Exception e) {
-                    logError("Excepcion durante procesamiento: " + e.getMessage(), lineNumber);
+                    registerError("Excepcion durante procesamiento: " + e.getMessage(), lineNumber);
                     stats.erroresOtros++;
                 }
             }
         } catch (IOException e) {
             String errorMsg = "ERROR CRITICO: No se pudo abrir o leer el archivo: " + filename;
-            logError(errorMsg, -1);
+            registerError(errorMsg, -1);
             throw new RuntimeException(errorMsg, e);
         }
-
-        logError("", -1);
-        logError("=== RESUMEN DE CARGA ===", -1);
-        logError("Total de lineas procesadas: " + stats.totalLineas, -1);
-        logError("Productos cargados exitosamente: " + stats.productosExitosos, -1);
-        logError("Errores de formato de linea: " + stats.erroresLinea, -1);
-        logError("Codigos de barra duplicados: " + stats.erroresDuplicados, -1);
-        logError("Errores de fecha: " + stats.erroresFecha, -1);
-        logError("Errores de numeros: " + stats.erroresNumeros, -1);
-        logError("Otros errores: " + stats.erroresOtros, -1);
-
-        int totalErrores = stats.erroresLinea + stats.erroresDuplicados + stats.erroresFecha
-                + stats.erroresNumeros + stats.erroresOtros;
-        logError("Total de errores: " + totalErrores, -1);
 
         Product[] result = new Product[productsCount];
         for (int i = 0; i < productsCount; i++) {
@@ -165,29 +150,26 @@ public class CSVLoader {
         return new LoadStats(stats);
     }
 
-    private void clearLogFile() {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(logFile, false))) {
-            writer.write("=== Log de Errores - CSVLoader ===");
-            writer.newLine();
-            writer.write("Inicio de carga: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-            writer.newLine();
-            writer.write("====================================");
-            writer.newLine();
-            writer.newLine();
-        } catch (IOException ignored) {
+    public String[] getErrorDetails() {
+        String[] result = new String[errorDetailsCount];
+        for (int i = 0; i < errorDetailsCount; i++) {
+            result[i] = errorDetails[i];
         }
+        return result;
     }
 
-    private void logError(String message, int lineNumber) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(logFile, true))) {
-            if (lineNumber > 0) {
-                writer.write("[Linea " + lineNumber + "] " + message);
-            } else {
-                writer.write(message);
-            }
-            writer.newLine();
-        } catch (IOException ignored) {
+    private void registerError(String message, int lineNumber) {
+        String entry;
+        if (lineNumber > 0) {
+            entry = "[Linea " + lineNumber + "] " + message;
+        } else {
+            entry = message;
         }
+
+        if (errorDetailsCount == errorDetails.length) {
+            errorDetails = growStringArray(errorDetails);
+        }
+        errorDetails[errorDetailsCount++] = entry;
     }
 
     private String[] splitLineWithQuotes(String line, char delimiterChar) {
