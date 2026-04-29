@@ -11,13 +11,19 @@
       <p class="lead mb-4">Selecciona un archivo CSV para procesar los datos.</p>
 
       <div class="row g-3 align-items-end">
-        <div class="col-lg-8">
+        <div class="col-lg-4">
+          <label for="csvType" class="form-label">Tipo de CSV</label>
+          <select id="csvType" class="form-select form-select-lg" (change)="onCsvTypeChange($event)">
+            <option *ngFor="let type of csvTypes" [value]="type.value">{{ type.label }}</option>
+          </select>
+        </div>
+        <div class="col-lg-5">
           <label for="csvFile" class="form-label">Archivo CSV</label>
           <input id="csvFile" type="file" accept=".csv,text/csv" class="form-control form-control-lg"
             (change)="onFileSelected($event)" />
           <div class="form-text mt-2">{{ selectedFileName }}</div>
         </div>
-        <div class="col-lg-4 d-grid">
+        <div class="col-lg-3 d-grid">
           <button class="btn btn-market btn-lg" type="button" (click)="uploadCsv()" [disabled]="isUploading">
             {{ isUploading ? 'Procesando...' : 'Cargar' }}
           </button>
@@ -49,7 +55,7 @@
       <div *ngIf="uploadStats" class="stats-summary mt-3">
         <small>Resultados:</small>
         <ul class="mb-0 mt-2">
-          <li>Productos cargados: {{ uploadStats.productosExitosos }}</li>
+          <li>Registros cargados: {{ uploadStats.registrosExitosos }}</li>
           <li>Total de líneas: {{ uploadStats.totalLineas }}</li>
           <li>Errores encontrados: {{ uploadStats.erroresLinea + uploadStats.erroresDuplicados +
             uploadStats.erroresFecha + uploadStats.erroresNumeros + uploadStats.erroresOtros }}</li>

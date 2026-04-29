@@ -1,10 +1,14 @@
 com\supermarkets\api\products\UploadCsvServlet.class
 com\supermarkets\structures\avl\NodoAvl.class
 com\supermarkets\structures\b\NodoB.class
+com\supermarkets\api\products\UploadCsvServlet$1.class
 com\supermarkets\structures\avl\ArbolAvl.class
+com\supermarkets\pojo\Sucursal.class
+com\supermarkets\pojo\ConexionSucursal.class
 com\supermarkets\pojo\Product.class
 com\supermarkets\helpers\CSVLoader.class
 com\supermarkets\api\config\CorsFilter.class
+com\supermarkets\helpers\CSVLoader$CsvType.class
 com\supermarkets\structures\b\ArbolB.class
 com\supermarkets\structures\bplus\ArbolBPlus.class
 com\supermarkets\helpers\LoadStats.class

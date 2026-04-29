@@ -1,17 +1,19 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, catchError, map, of, timeout } from 'rxjs';
+import { Observable, timeout } from 'rxjs';
 import { environment } from '../../environments/environment';
+
+export type CsvType = 'sucursales' | 'conexiones' | 'catalogo';
 
 export interface CsvUploadResponse {
   success: boolean;
   message: string;
-  productsLoaded?: number;
+  recordsLoaded?: number;
   totalErrors?: number;
   errors?: string[];
   stats?: {
     totalLineas: number;
-    productosExitosos: number;
+    registrosExitosos: number;
     erroresLinea: number;
     erroresDuplicados: number;
     erroresFecha: number;
@@ -28,9 +30,10 @@ export class CsvUploadService {
 
   constructor(private readonly http: HttpClient) {}
 
-  upload(file: File, hasHeader: boolean): Observable<CsvUploadResponse> {
+  upload(file: File, csvType: CsvType, hasHeader: boolean): Observable<CsvUploadResponse> {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('csvType', csvType);
     formData.append('hasHeader', String(hasHeader));
 
     return this.http

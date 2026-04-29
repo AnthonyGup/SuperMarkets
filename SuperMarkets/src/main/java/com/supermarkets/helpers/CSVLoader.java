@@ -1,303 +1,251 @@
 package com.supermarkets.helpers;
 
+import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvException;
+import com.supermarkets.pojo.ConexionSucursal;
 import com.supermarkets.pojo.Product;
+import com.supermarkets.pojo.Sucursal;
 
-import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 public class CSVLoader {
-    private final String delimiter;
 
-    private String[] loadedBarcodes;
-    private int loadedBarcodesCount;
+    public enum CsvType {
+        SUCURSALES("sucursales"),
+        CONEXIONES("conexiones"),
+        CATALOGO("catalogo");
 
-    private String[] errorDetails;
-    private int errorDetailsCount;
+        private final String value;
 
-    private LoadStats stats;
+        CsvType(String value) {
+            this.value = value;
+        }
 
-    public CSVLoader() {
-        this(null, ",");
-    }
-
-    public CSVLoader(String logFilePath, String delimiter) {
-        this.delimiter = (delimiter == null || delimiter.isEmpty()) ? "," : delimiter;
-        this.loadedBarcodes = new String[64];
-        this.loadedBarcodesCount = 0;
-        this.errorDetails = new String[64];
-        this.errorDetailsCount = 0;
-        this.stats = new LoadStats();
-    }
-
-    public Product[] loadProducts(String filename, boolean hasHeader) {
-        Product[] products = new Product[64];
-        int productsCount = 0;
-
-        stats = new LoadStats();
-        loadedBarcodesCount = 0;
-        errorDetailsCount = 0;
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
-            int lineNumber = 0;
-            String line;
-
-            if (hasHeader) {
-                line = reader.readLine();
-                if (line != null) {
-                    lineNumber++;
+        public static CsvType fromValue(String value) {
+            if (value == null) {
+                return null;
+            }
+            for (CsvType type : values()) {
+                if (type.value.equalsIgnoreCase(value)) {
+                    return type;
                 }
             }
+            return null;
+        }
+    }
 
-            while ((line = reader.readLine()) != null) {
-                lineNumber++;
+    private final LoadStats stats = new LoadStats();
+    private final List<String> errorDetails = new ArrayList<>();
 
-                if (trim(line).isEmpty()) {
-                    continue;
-                }
+    public CSVLoader() {}
 
+    public List<Sucursal> loadSucursales(Path filePath, boolean hasHeader) throws IOException {
+        resetStats();
+        List<Sucursal> sucursales = new ArrayList<>();
+
+        try (CSVReader reader = new CSVReader(new FileReader(filePath.toFile()))) {
+            List<String[]> allLines;
+            try {
+                allLines = reader.readAll();
+            } catch (CsvException e) {
+                throw new IOException("Error al leer el archivo CSV", e);
+            }
+
+            int startIndex = hasHeader ? 1 : 0;
+            for (int i = startIndex; i < allLines.size(); i++) {
+                String[] fields = allLines.get(i);
                 stats.totalLineas++;
 
-                String[] fields = splitLineWithQuotes(line, delimiter.charAt(0));
-                if (fields.length < 7) {
-                    registerError("Numero insuficiente de campos. Se esperaban 7, se encontraron " + fields.length, lineNumber);
+                if (fields == null || fields.length < 6) {
+                    registerError("Linea " + (i + 1) + ": Campos insuficientes. Se esperaban 6, se encontraron " + (fields != null ? fields.length : 0));
                     stats.erroresLinea++;
                     continue;
                 }
 
                 try {
-                    String nombre = removeQuotes(fields[0]);
-                    String codigoBarra = removeQuotes(fields[1]);
-                    String categoria = removeQuotes(fields[2]);
-                    String fechaCaducidad = removeQuotes(fields[3]);
-                    String marca = removeQuotes(fields[4]);
-                    String precioStr = removeQuotes(fields[5]);
-                    String stockStr = removeQuotes(fields[6]);
+                    Sucursal sucursal = new Sucursal();
+                    sucursal.setId(trim(fields[0]));
+                    sucursal.setNombre(trim(fields[1]));
+                    sucursal.setUbicacion(trim(fields[2]));
+                    sucursal.settIngreso(parseDouble(trim(fields[3])));
+                    sucursal.settTraspaso(parseDouble(trim(fields[4])));
+                    sucursal.settDespacho(parseDouble(trim(fields[5])));
 
-                    if (nombre.isEmpty()) {
-                        registerError("Campo 'Nombre' vacio", lineNumber);
+                    if (sucursal.getId() == null || sucursal.getId().isEmpty()) {
+                        registerError("Linea " + (i + 1) + ": ID de sucursal vacio");
                         stats.erroresOtros++;
                         continue;
                     }
 
-                    if (codigoBarra.isEmpty()) {
-                        registerError("Campo 'CodigoBarra' vacio", lineNumber);
-                        stats.erroresOtros++;
-                        continue;
-                    }
-
-                    if (!isValidISODate(fechaCaducidad)) {
-                        registerError("Fecha de caducidad invalida: '" + fechaCaducidad + "'. Formato esperado: YYYY-MM-DD", lineNumber);
-                        stats.erroresFecha++;
-                        continue;
-                    }
-
-                    if (!isValidDouble(precioStr)) {
-                        registerError("Precio invalido: '" + precioStr + "' no es un numero valido", lineNumber);
-                        stats.erroresNumeros++;
-                        continue;
-                    }
-
-                    if (!isValidInteger(stockStr)) {
-                        registerError("Stock invalido: '" + stockStr + "' no es un numero entero valido", lineNumber);
-                        stats.erroresNumeros++;
-                        continue;
-                    }
-
-                    if (!isUniqueBarcode(codigoBarra)) {
-                        registerError("Codigo de barra duplicado: '" + codigoBarra + "'. Producto omitido.", lineNumber);
-                        stats.erroresDuplicados++;
-                        continue;
-                    }
-
-                    Product product = new Product();
-                    product.setName(nombre);
-                    product.setBarcode(codigoBarra);
-                    product.setCategory(categoria);
-                    product.setExpiryDate(fechaCaducidad);
-                    product.setBrand(marca);
-                    product.setPrice(Double.parseDouble(precioStr));
-                    product.setStock(Integer.parseInt(stockStr));
-
-                    if (productsCount == products.length) {
-                        products = growProductArray(products);
-                    }
-                    products[productsCount++] = product;
+                    sucursales.add(sucursal);
                     stats.productosExitosos++;
                 } catch (Exception e) {
-                    registerError("Excepcion durante procesamiento: " + e.getMessage(), lineNumber);
+                    registerError("Linea " + (i + 1) + ": " + e.getMessage());
                     stats.erroresOtros++;
                 }
             }
-        } catch (IOException e) {
-            String errorMsg = "ERROR CRITICO: No se pudo abrir o leer el archivo: " + filename;
-            registerError(errorMsg, -1);
-            throw new RuntimeException(errorMsg, e);
         }
 
-        Product[] result = new Product[productsCount];
-        for (int i = 0; i < productsCount; i++) {
-            result[i] = products[i];
-        }
-        return result;
+        return sucursales;
     }
 
-    public Product[] loadProducts(String filename) {
-        return loadProducts(filename, true);
+    public List<ConexionSucursal> loadConexiones(Path filePath, boolean hasHeader) throws IOException {
+        resetStats();
+        List<ConexionSucursal> conexiones = new ArrayList<>();
+
+        try (CSVReader reader = new CSVReader(new FileReader(filePath.toFile()))) {
+            List<String[]> allLines;
+            try {
+                allLines = reader.readAll();
+            } catch (CsvException e) {
+                throw new IOException("Error al leer el archivo CSV", e);
+            }
+
+            int startIndex = hasHeader ? 1 : 0;
+            for (int i = startIndex; i < allLines.size(); i++) {
+                String[] fields = allLines.get(i);
+                stats.totalLineas++;
+
+                if (fields == null || fields.length < 4) {
+                    registerError("Linea " + (i + 1) + ": Campos insuficientes. Se esperaban 4, se encontraron " + (fields != null ? fields.length : 0));
+                    stats.erroresLinea++;
+                    continue;
+                }
+
+                try {
+                    ConexionSucursal conexion = new ConexionSucursal();
+                    conexion.setOrigenId(trim(fields[0]));
+                    conexion.setDestinoId(trim(fields[1]));
+                    conexion.setTiempo(parseDouble(trim(fields[2])));
+                    conexion.setCosto(parseDouble(trim(fields[3])));
+
+                    if (conexion.getOrigenId() == null || conexion.getOrigenId().isEmpty()) {
+                        registerError("Linea " + (i + 1) + ": OrigenID vacio");
+                        stats.erroresOtros++;
+                        continue;
+                    }
+
+                    if (conexion.getDestinoId() == null || conexion.getDestinoId().isEmpty()) {
+                        registerError("Linea " + (i + 1) + ": DestinoID vacio");
+                        stats.erroresOtros++;
+                        continue;
+                    }
+
+                    conexiones.add(conexion);
+                    stats.productosExitosos++;
+                } catch (Exception e) {
+                    registerError("Linea " + (i + 1) + ": " + e.getMessage());
+                    stats.erroresOtros++;
+                }
+            }
+        }
+
+        return conexiones;
+    }
+
+    public List<Product> loadCatalogo(Path filePath, boolean hasHeader) throws IOException {
+        resetStats();
+        List<Product> products = new ArrayList<>();
+
+        try (CSVReader reader = new CSVReader(new FileReader(filePath.toFile()))) {
+            List<String[]> allLines;
+            try {
+                allLines = reader.readAll();
+            } catch (CsvException e) {
+                throw new IOException("Error al leer el archivo CSV", e);
+            }
+
+            int startIndex = hasHeader ? 1 : 0;
+            for (int i = startIndex; i < allLines.size(); i++) {
+                String[] fields = allLines.get(i);
+                stats.totalLineas++;
+
+                if (fields == null || fields.length < 8) {
+                    registerError("Linea " + (i + 1) + ": Campos insuficientes. Se esperaban 8, se encontraron " + (fields != null ? fields.length : 0));
+                    stats.erroresLinea++;
+                    continue;
+                }
+
+                try {
+                    Product product = new Product();
+                    product.setSucursalId(trim(fields[0]));
+                    product.setName(trim(fields[1]));
+                    product.setBarcode(trim(fields[2]));
+                    product.setCategory(trim(fields[3]));
+                    product.setExpiryDate(trim(fields[4]));
+                    product.setBrand(trim(fields[5]));
+                    product.setPrice(parseDouble(trim(fields[6])));
+                    product.setStock(parseInt(trim(fields[7])));
+
+                    if (product.getBarcode() == null || product.getBarcode().isEmpty()) {
+                        registerError("Linea " + (i + 1) + ": Codigo de barra vacio");
+                        stats.erroresOtros++;
+                        continue;
+                    }
+
+                    products.add(product);
+                    stats.productosExitosos++;
+                } catch (Exception e) {
+                    registerError("Linea " + (i + 1) + ": " + e.getMessage());
+                    stats.erroresOtros++;
+                }
+            }
+        }
+
+        return products;
     }
 
     public LoadStats getLoadStats() {
         return new LoadStats(stats);
     }
 
-    public String[] getErrorDetails() {
-        String[] result = new String[errorDetailsCount];
-        for (int i = 0; i < errorDetailsCount; i++) {
-            result[i] = errorDetails[i];
-        }
-        return result;
+    public List<String> getErrorDetails() {
+        return new ArrayList<>(errorDetails);
     }
 
-    private void registerError(String message, int lineNumber) {
-        String entry;
-        if (lineNumber > 0) {
-            entry = "[Linea " + lineNumber + "] " + message;
-        } else {
-            entry = message;
-        }
-
-        if (errorDetailsCount == errorDetails.length) {
-            errorDetails = growStringArray(errorDetails);
-        }
-        errorDetails[errorDetailsCount++] = entry;
+    private void resetStats() {
+        errorDetails.clear();
+        stats.totalLineas = 0;
+        stats.productosExitosos = 0;
+        stats.erroresLinea = 0;
+        stats.erroresDuplicados = 0;
+        stats.erroresFecha = 0;
+        stats.erroresNumeros = 0;
+        stats.erroresOtros = 0;
     }
 
-    private String[] splitLineWithQuotes(String line, char delimiterChar) {
-        String[] tokens = new String[8];
-        int count = 0;
-
-        StringBuilder token = new StringBuilder();
-        boolean insideQuotes = false;
-
-        for (int i = 0; i < line.length(); i++) {
-            char c = line.charAt(i);
-
-            if (c == '"') {
-                insideQuotes = !insideQuotes;
-                token.append(c);
-            } else if (c == delimiterChar && !insideQuotes) {
-                if (count == tokens.length) {
-                    tokens = growStringArray(tokens);
-                }
-                tokens[count++] = token.toString();
-                token.setLength(0);
-            } else {
-                token.append(c);
-            }
-        }
-
-        if (count == tokens.length) {
-            tokens = growStringArray(tokens);
-        }
-        tokens[count++] = token.toString();
-
-        String[] result = new String[count];
-        for (int i = 0; i < count; i++) {
-            result[i] = tokens[i];
-        }
-        return result;
+    private void registerError(String message) {
+        errorDetails.add(message);
     }
 
     private String trim(String str) {
         return str == null ? "" : str.trim();
     }
 
-    private String removeQuotes(String str) {
-        String trimmed = trim(str);
-        if (trimmed.length() >= 2 && trimmed.charAt(0) == '"' && trimmed.charAt(trimmed.length() - 1) == '"') {
-            return trimmed.substring(1, trimmed.length() - 1);
+    private double parseDouble(String str) {
+        if (str == null || str.trim().isEmpty()) {
+            return 0.0;
         }
-        return trimmed;
-    }
-
-    private boolean isValidISODate(String date) {
-        if (date == null || date.length() != 10) {
-            return false;
-        }
-
-        if (date.charAt(4) != '-' || date.charAt(7) != '-') {
-            return false;
-        }
-
-        for (int i = 0; i < date.length(); i++) {
-            if (i == 4 || i == 7) {
-                continue;
-            }
-            if (!Character.isDigit(date.charAt(i))) {
-                return false;
-            }
-        }
-
         try {
-            int month = Integer.parseInt(date.substring(5, 7));
-            int day = Integer.parseInt(date.substring(8, 10));
-            if (month < 1 || month > 12) {
-                return false;
-            }
-            if (day < 1 || day > 31) {
-                return false;
-            }
-            return true;
-        } catch (Exception e) {
-            return false;
+            return Double.parseDouble(str.trim());
+        } catch (NumberFormatException e) {
+            throw new NumberFormatException("Valor double invalido: " + str);
         }
     }
 
-    private boolean isValidDouble(String str) {
+    private int parseInt(String str) {
+        if (str == null || str.trim().isEmpty()) {
+            return 0;
+        }
         try {
-            Double.parseDouble(str);
-            return true;
-        } catch (Exception e) {
-            return false;
+            return Integer.parseInt(str.trim());
+        } catch (NumberFormatException e) {
+            throw new NumberFormatException("Valor entero invalido: " + str);
         }
-    }
-
-    private boolean isValidInteger(String str) {
-        try {
-            Integer.parseInt(str);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private boolean isUniqueBarcode(String barcode) {
-        for (int i = 0; i < loadedBarcodesCount; i++) {
-            if (barcode.equals(loadedBarcodes[i])) {
-                return false;
-            }
-        }
-
-        if (loadedBarcodesCount == loadedBarcodes.length) {
-            loadedBarcodes = growStringArray(loadedBarcodes);
-        }
-        loadedBarcodes[loadedBarcodesCount++] = barcode;
-        return true;
-    }
-
-    private String[] growStringArray(String[] source) {
-        String[] grown = new String[source.length * 2];
-        for (int i = 0; i < source.length; i++) {
-            grown[i] = source[i];
-        }
-        return grown;
-    }
-
-    private Product[] growProductArray(Product[] source) {
-        Product[] grown = new Product[source.length * 2];
-        for (int i = 0; i < source.length; i++) {
-            grown[i] = source[i];
-        }
-        return grown;
     }
 }

@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, ChangeDetectorRef } from '@angular/core';
-import { CsvUploadResponse, CsvUploadService } from './services/csv-upload.service';
+import { CsvType, CsvUploadResponse, CsvUploadService } from './services/csv-upload.service';
 
 @Component({
   selector: 'app-root',
@@ -13,12 +13,19 @@ export class App {
   title = 'SuperMarkets';
   selectedFileName = 'Sin archivo seleccionado';
   selectedFile: File | null = null;
+  selectedCsvType: CsvType = 'catalogo';
   hasHeader = false;
   isUploading = false;
   alertType: 'success' | 'danger' | 'info' | '' = 'info';
   alertMessage = 'Selecciona un archivo CSV';
   uploadErrors: string[] = [];
   uploadStats: CsvUploadResponse['stats'] | null = null;
+
+  csvTypes: { value: CsvType; label: string }[] = [
+    { value: 'catalogo', label: 'Catálogo de Productos' },
+    { value: 'sucursales', label: 'Sucursales' },
+    { value: 'conexiones', label: 'Conexiones entre Sucursales' }
+  ];
 
   private readonly csvUploadService = inject(CsvUploadService);
   private readonly cd = inject(ChangeDetectorRef);
@@ -33,6 +40,15 @@ export class App {
     this.alertMessage = file ? `Listo: ${file.name}` : 'Selecciona un archivo CSV';
     this.uploadErrors = [];
     this.uploadStats = null;
+
+    this.cd.detectChanges();
+  }
+
+  onCsvTypeChange(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    this.selectedCsvType = select.value as CsvType;
+    this.uploadStats = null;
+    this.uploadErrors = [];
 
     this.cd.detectChanges();
   }
@@ -61,7 +77,7 @@ export class App {
 
     this.cd.detectChanges();
 
-    this.csvUploadService.upload(this.selectedFile, this.hasHeader).subscribe({
+    this.csvUploadService.upload(this.selectedFile, this.selectedCsvType, this.hasHeader).subscribe({
       next: (response) => {
         this.isUploading = false;
         this.alertType = response.success ? 'success' : 'danger';

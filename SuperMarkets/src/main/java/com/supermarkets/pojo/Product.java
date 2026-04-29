@@ -1,6 +1,7 @@
 package com.supermarkets.pojo;
 
 public class Product {
+    private String sucursalId;
     private String name;
     private String barcode;
     private String category;
@@ -12,6 +13,14 @@ public class Product {
     public Product() {
         this.price = 0.0;
         this.stock = 0;
+    }
+
+    public String getSucursalId() {
+        return sucursalId;
+    }
+
+    public void setSucursalId(String sucursalId) {
+        this.sucursalId = sucursalId;
     }
 
     public String getName() {
