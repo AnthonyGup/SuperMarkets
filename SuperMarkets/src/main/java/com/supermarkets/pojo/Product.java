@@ -1,6 +1,22 @@
 package com.supermarkets.pojo;
 
 public class Product {
+    public enum Estado {
+        DISPONIBLE("disponible"),
+        EN_TRANSITO("en transito"),
+        AGOTADO("agotado");
+
+        private final String valor;
+
+        Estado(String valor) {
+            this.valor = valor;
+        }
+
+        public String getValor() {
+            return valor;
+        }
+    }
+
     private String sucursalId;
     private String name;
     private String barcode;
@@ -9,10 +25,12 @@ public class Product {
     private String brand;
     private double price;
     private int stock;
+    private Estado estado;
 
     public Product() {
         this.price = 0.0;
         this.stock = 0;
+        this.estado = Estado.DISPONIBLE;
     }
 
     public String getSucursalId() {
@@ -85,5 +103,13 @@ public class Product {
 
     public void setStock(int stock) {
         this.stock = stock;
+    }
+
+    public Estado getEstado() {
+        return estado;
+    }
+
+    public void setEstado(Estado estado) {
+        this.estado = estado;
     }
 }
