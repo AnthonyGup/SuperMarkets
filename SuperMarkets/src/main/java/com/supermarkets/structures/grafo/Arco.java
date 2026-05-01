@@ -1,39 +1,29 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.supermarkets.structures.grafo;
 
-import com.supermarkets.pojo.Sucursal;
-
-/**
- *
- * @author antho
- */
 public class Arco {
-    
-    private Sucursal destino;
+    private String destinoId;
     private float peso;
     private Arco siguiente;
 
-    public Arco(Sucursal destino) {
-        this.destino = destino;
+    public Arco(String destinoId) {
+        this.destinoId = destinoId;
         this.siguiente = null;
     }
 
-    public Arco(Sucursal destino, float peso) {
-        this.destino = destino;
+    public Arco(String destinoId, float peso) {
+        this.destinoId = destinoId;
         this.peso = peso;
+        this.siguiente = null;
     }
 
-    public Sucursal getDestino() {
-        return destino;
+    public String getDestinoId() {
+        return destinoId;
     }
 
-    public void setDestino(Sucursal destino) {
-        this.destino = destino;
+    public void setDestinoId(String destinoId) {
+        this.destinoId = destinoId;
     }
-    
+
     public float getPeso() {
         return peso;
     }
@@ -49,6 +39,4 @@ public class Arco {
     public void setSiguiente(Arco siguiente) {
         this.siguiente = siguiente;
     }
-    
-    
 }

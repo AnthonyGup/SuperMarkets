@@ -6,6 +6,11 @@ public class ArbolB {
     protected int orden;
     protected NodoB raiz;
 
+    public ArbolB() {
+        this.orden = 5;
+        this.raiz = null;
+    }
+
     public ArbolB(int m) {
         this.orden = m;
         this.raiz = null;
@@ -358,5 +363,84 @@ public class ArbolB {
         if (expiryDate == null || expiryDate.trim().isEmpty()) {
             throw new IllegalArgumentException(operacion + ": expiryDate vacio");
         }
+    }
+
+    public void eliminar(Product producto) {
+        if (producto != null && producto.getExpiryDate() != null) {
+            eliminar(producto.getExpiryDate());
+        }
+    }
+
+    public String[] toArrayInOrder() {
+        int count = contarNodos(raiz);
+        String[] resultado = new String[count];
+        llenarArray(raiz, resultado, new int[]{0});
+        return resultado;
+    }
+
+    private int contarNodos(NodoB nodo) {
+        if (nodo == null) {
+            return 0;
+        }
+        int count = 0;
+        int numClaves = nodo.Ocuenta();
+        for (int i = 1; i <= numClaves; i++) {
+            count++;
+        }
+        if (nodo.Orama(0) != null) {
+            count += contarNodos(nodo.Orama(0));
+        }
+        return count;
+    }
+
+    private void llenarArray(NodoB nodo, String[] arr, int[] index) {
+        if (nodo == null) {
+            return;
+        }
+        int numClaves = nodo.Ocuenta();
+        if (nodo.Orama(0) != null) {
+            llenarArray(nodo.Orama(0), arr, index);
+        }
+        for (int i = 1; i <= numClaves; i++) {
+            arr[index[0]++] = nodo.Oclave(i).getExpiryDate();
+            if (nodo.Orama(i) != null && i < numClaves) {
+                llenarArray(nodo.Orama(i), arr, index);
+            }
+        }
+        if (nodo.Orama(numClaves) != null) {
+            llenarArray(nodo.Orama(numClaves), arr, index);
+        }
+    }
+
+    public Product[] buscarPorRango(String fechaInicio, String fechaFin) {
+        if (fechaInicio == null || fechaFin == null) {
+            return new Product[0];
+        }
+
+        String[] fechas = toArrayInOrder();
+        int count = 0;
+
+        for (String fecha : fechas) {
+            if (comparar(fecha, fechaInicio) >= 0 && comparar(fecha, fechaFin) <= 0) {
+                count++;
+            }
+        }
+
+        if (count == 0) {
+            return new Product[0];
+        }
+
+        Product[] resultado = new Product[count];
+        count = 0;
+        for (String fecha : fechas) {
+            if (comparar(fecha, fechaInicio) >= 0 && comparar(fecha, fechaFin) <= 0) {
+                Product p = buscar(fecha);
+                if (p != null) {
+                    resultado[count++] = p;
+                }
+            }
+        }
+
+        return resultado;
     }
 }

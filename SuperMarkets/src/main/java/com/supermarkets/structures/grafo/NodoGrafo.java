@@ -1,26 +1,26 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.supermarkets.structures.grafo;
 
 import com.supermarkets.pojo.Sucursal;
 
-/**
- *
- * @author antho
- */
 public class NodoGrafo {
-    
+    private String id;
     private Sucursal dato;
     private ListaAdyacencia lista;
-    private NodoGrafo siguientee;
-    
-    
-    public NodoGrafo(Sucursal dato) {
+    private NodoGrafo siguiente;
+
+    public NodoGrafo(String id, Sucursal dato) {
+        this.id = id;
         this.dato = dato;
         this.lista = new ListaAdyacencia();
-        this.siguientee = null;
+        this.siguiente = null;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public Sucursal getDato() {
@@ -30,8 +30,6 @@ public class NodoGrafo {
     public void setDato(Sucursal dato) {
         this.dato = dato;
     }
-    
-    
 
     public ListaAdyacencia getLista() {
         return lista;
@@ -41,13 +39,11 @@ public class NodoGrafo {
         this.lista = lista;
     }
 
-    public NodoGrafo getSiguientee() {
-        return siguientee;
+    public NodoGrafo getSiguiente() {
+        return siguiente;
     }
 
-    public void setSiguientee(NodoGrafo siguientee) {
-        this.siguientee = siguientee;
+    public void setSiguiente(NodoGrafo siguiente) {
+        this.siguiente = siguiente;
     }
-    
-    
 }

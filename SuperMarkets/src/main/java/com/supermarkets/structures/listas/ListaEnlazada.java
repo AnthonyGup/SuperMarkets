@@ -17,6 +17,10 @@ public class ListaEnlazada {
         return size;
     }
 
+    public NodoList getCabeza() {
+        return cabeza;
+    }
+
     public NodoList buscarNodo(String nombre) {
         String nombreBuscado = normalizar(nombre);
         NodoList actual = cabeza;

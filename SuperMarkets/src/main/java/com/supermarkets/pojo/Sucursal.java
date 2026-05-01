@@ -1,8 +1,12 @@
 package com.supermarkets.pojo;
 
+import com.supermarkets.structures.avl.ArbolAvl;
+import com.supermarkets.structures.b.ArbolB;
+import com.supermarkets.structures.bplus.ArbolBPlus;
 import com.supermarkets.structures.cola.Cola;
 import com.supermarkets.structures.hash.TablaHash;
 import com.supermarkets.structures.listas.ListaEnlazada;
+import com.supermarkets.structures.pila.Pila;
 
 public class Sucursal implements Runnable {
     private String id;
@@ -16,8 +20,14 @@ public class Sucursal implements Runnable {
     private Cola colaPreparacion;
     private Cola colaSalida;
 
+    private ArbolAvl inventarioAvl;
+    private ArbolB inventarioB;
+    private ArbolBPlus inventarioBPlus;
     private TablaHash inventarioHash;
     private ListaEnlazada inventarioLista;
+
+    private Pila pilaCambios;
+    private Pila pilaDevoluciones;
 
     private volatile boolean ejecutando;
     private Thread hilo;
@@ -26,9 +36,109 @@ public class Sucursal implements Runnable {
         this.colaIngreso = new Cola();
         this.colaPreparacion = new Cola();
         this.colaSalida = new Cola();
+
+        this.inventarioAvl = new ArbolAvl();
+        this.inventarioB = new ArbolB();
+        this.inventarioBPlus = new ArbolBPlus();
         this.inventarioHash = new TablaHash(16);
         this.inventarioLista = new ListaEnlazada();
+
+        this.pilaCambios = new Pila();
+        this.pilaDevoluciones = new Pila();
+
         this.ejecutando = false;
+    }
+
+    public boolean agregarProducto(Product producto) {
+        if (producto == null) {
+            return false;
+        }
+
+        try {
+            inventarioLista.insertar(producto);
+            inventarioHash.insertar(producto.getBarcode(), producto);
+            inventarioAvl.insertar(producto);
+            inventarioB.insertar(producto);
+            inventarioBPlus.insertar(producto);
+            return true;
+        } catch (Exception e) {
+            rollbackProducto(producto);
+            return false;
+        }
+    }
+
+    public boolean eliminarProducto(String nombre) {
+        try {
+            Product producto = inventarioAvl.buscarProducto(nombre);
+            if (producto != null) {
+                inventarioLista.eliminar(nombre);
+                inventarioHash.eliminar(producto.getBarcode());
+                inventarioB.eliminar(producto);
+                inventarioBPlus.eliminar(producto.getCategory());
+                pilaCambios.push(producto);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean deshacer() {
+        if (pilaCambios.isEmpty()) {
+            return false;
+        }
+        Product producto = pilaCambios.pop();
+        return agregarProducto(producto);
+    }
+
+    public boolean devolver(Product producto) {
+        if (producto != null) {
+            pilaDevoluciones.push(producto);
+            return agregarProducto(producto);
+        }
+        return false;
+    }
+
+    private void rollbackProducto(Product producto) {
+        try {
+            inventarioLista.eliminar(producto.getName());
+        } catch (Exception ignored) {}
+        try {
+            inventarioHash.eliminar(producto.getBarcode());
+        } catch (Exception ignored) {}
+    }
+
+    public Product buscarPorNombre(String nombre) {
+        return inventarioAvl.busquedaBinaria(nombre);
+    }
+
+    public Product buscarPorBarcode(String barcode) {
+        return inventarioHash.buscar(barcode);
+    }
+
+    public Product[] buscarPorCategoria(String categoria) {
+        return inventarioBPlus.buscarPorCategoria(categoria);
+    }
+
+    public Product[] buscarPorRangoFechas(String fechaInicio, String fechaFin) {
+        return inventarioB.buscarPorRango(fechaInicio, fechaFin);
+    }
+
+    public boolean existeProducto(String nombre) {
+        return inventarioAvl.buscar(nombre);
+    }
+
+    public void agregarAIngreso(Product producto) {
+        colaIngreso.put(producto);
+    }
+
+    public void agregarAPreparacion(Product producto) {
+        colaPreparacion.put(producto);
+    }
+
+    public void agregarASalida(Product producto) {
+        colaSalida.put(producto);
     }
 
     public void iniciar() {
@@ -85,18 +195,6 @@ public class Sucursal implements Runnable {
                 Thread.currentThread().interrupt();
             }
         }
-    }
-
-    public void agregarAIngreso(Product producto) {
-        colaIngreso.put(producto);
-    }
-
-    public void agregarAPreparacion(Product producto) {
-        colaPreparacion.put(producto);
-    }
-
-    public void agregarASalida(Product producto) {
-        colaSalida.put(producto);
     }
 
     public String getId() {
@@ -159,6 +257,18 @@ public class Sucursal implements Runnable {
         return colaSalida;
     }
 
+    public ArbolAvl getInventarioAvl() {
+        return inventarioAvl;
+    }
+
+    public ArbolB getInventarioB() {
+        return inventarioB;
+    }
+
+    public ArbolBPlus getInventarioBPlus() {
+        return inventarioBPlus;
+    }
+
     public TablaHash getInventarioHash() {
         return inventarioHash;
     }
@@ -167,7 +277,19 @@ public class Sucursal implements Runnable {
         return inventarioLista;
     }
 
+    public Pila getPilaCambios() {
+        return pilaCambios;
+    }
+
+    public Pila getPilaDevoluciones() {
+        return pilaDevoluciones;
+    }
+
     public boolean isEjecutando() {
         return ejecutando;
+    }
+
+    public int getTotalProductos() {
+        return inventarioLista.getSize();
     }
 }

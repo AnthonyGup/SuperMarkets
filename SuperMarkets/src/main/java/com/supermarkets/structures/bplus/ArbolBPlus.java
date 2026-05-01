@@ -2,11 +2,18 @@ package com.supermarkets.structures.bplus;
 
 import com.supermarkets.pojo.Product;
 import com.supermarkets.structures.listas.ListaEnlazada;
+import com.supermarkets.structures.listas.NodoList;
 
 public class ArbolBPlus {
 	protected int orden;
 	protected NodoBPlus raiz;
 	protected NodoBPlus hojaInicio;
+
+	public ArbolBPlus() {
+		this.orden = 5;
+		this.raiz = null;
+		this.hojaInicio = null;
+	}
 
 	public ArbolBPlus(int m) {
 		this.orden = m;
@@ -86,6 +93,28 @@ public class ArbolBPlus {
 		}
 
 		return buscar(nodo.Orama(i), categoria);
+	}
+
+	public Product[] buscarPorCategoria(String categoria) {
+		ListaEnlazada lista = buscar(categoria);
+		if (lista == null) {
+			return new Product[0];
+		}
+
+		int size = lista.getSize();
+		if (size == 0) {
+			return new Product[0];
+		}
+
+		Product[] resultado = new Product[size];
+		NodoList actual = lista.getCabeza();
+		int i = 0;
+		while (actual != null && i < size) {
+			resultado[i++] = actual.getDato();
+			actual = actual.getSiguiente();
+		}
+
+		return resultado;
 	}
 
 	private void insertarEnNodoNoLleno(NodoBPlus nodo, Product producto) {

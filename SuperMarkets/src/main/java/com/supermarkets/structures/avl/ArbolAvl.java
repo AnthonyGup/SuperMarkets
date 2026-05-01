@@ -27,6 +27,61 @@ public class ArbolAvl {
         return buscarNodoRecursivo(raiz, nombre);
     }
 
+    public Product buscarProducto(String nombre) {
+        if (nombre == null || nombre.isBlank()) {
+            return null;
+        }
+        return obtenerProducto(nombre);
+    }
+
+    public Product busquedaBinaria(String nombre) {
+        if (nombre == null || nombre.isBlank() || raiz == null) {
+            return null;
+        }
+
+        String[] elementos = toArrayInOrder();
+        int izquierda = 0;
+        int derecha = elementos.length - 1;
+
+        while (izquierda <= derecha) {
+            int medio = izquierda + (derecha - izquierda) / 2;
+            String actual = elementos[medio];
+            int cmp = comparar(actual, nombre);
+
+            if (cmp == 0) {
+                return buscarProducto(actual);
+            } else if (cmp < 0) {
+                izquierda = medio + 1;
+            } else {
+                derecha = medio - 1;
+            }
+        }
+        return null;
+    }
+
+    private String[] toArrayInOrder() {
+        int count = contarNodos(raiz);
+        String[] resultado = new String[count];
+        llenarArray(raiz, resultado, new int[]{0});
+        return resultado;
+    }
+
+    private int contarNodos(NodoAvl nodo) {
+        if (nodo == null) {
+            return 0;
+        }
+        return 1 + contarNodos(nodo.getIzquierdo()) + contarNodos(nodo.getDerecho());
+    }
+
+    private void llenarArray(NodoAvl nodo, String[] arr, int[] index) {
+        if (nodo == null) {
+            return;
+        }
+        llenarArray(nodo.getIzquierdo(), arr, index);
+        arr[index[0]++] = nodo.getDato().getName();
+        llenarArray(nodo.getDerecho(), arr, index);
+    }
+
     public Product obtenerProducto(String nombre) {
         if (nombre == null || nombre.isBlank()) {
             return null;
