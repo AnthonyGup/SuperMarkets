@@ -185,6 +185,7 @@ public class Sucursal implements Runnable {
 
         if (!colaPreparacion.isEmpty()) {
             try {
+                
                 Product producto = colaPreparacion.peek();
                 if (producto != null) {
                     Thread.sleep((long) (tTraspaso * 1000));

@@ -3,13 +3,13 @@ package com.supermarkets.api;
 import com.supermarkets.pojo.Product;
 import com.supermarkets.pojo.Sucursal;
 import com.supermarkets.structures.grafo.Grafo;
+import com.supermarkets.structures.cola.Cola;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class GestorTransferencias {
     public enum EtapaTransferencia {
-        COLA_PREPARACION_ORIGEN,
         COLA_SALIDA_ORIGEN,
         VIAJE,
         COLA_INGRESO_INTERMEDIA,
@@ -51,6 +51,7 @@ public class GestorTransferencias {
         private double progresoGeneral;
         private final long tiempoInicioTransferencia;
         private long etapaInicioMs;
+        private long tiempoEsperaInicioMs;
         private String sucursalActualId;
         private int tramoActualIndex;
         private boolean etapaIniciada;
@@ -63,10 +64,11 @@ public class GestorTransferencias {
             this.destinoId = destinoId;
             this.ruta = ruta;
             this.tramosViaje = tramos;
-            this.etapa = EtapaTransferencia.COLA_PREPARACION_ORIGEN;
+            this.etapa = EtapaTransferencia.COLA_SALIDA_ORIGEN;
             this.progresoGeneral = 0;
             this.tiempoInicioTransferencia = System.currentTimeMillis();
             this.etapaInicioMs = tiempoInicioTransferencia;
+            this.tiempoEsperaInicioMs = 0;
             this.sucursalActualId = origenId;
             this.tramoActualIndex = 0;
             this.etapaIniciada = false;
@@ -91,9 +93,17 @@ public class GestorTransferencias {
                 ? tramosViaje.get(tramoActualIndex) : null;
         }
         public long getEtapaInicioMs() { return etapaInicioMs; }
+        public long getTiempoEsperaInicioMs() { return tiempoEsperaInicioMs; }
+        public void setTiempoEsperaInicioMs(long ms) { this.tiempoEsperaInicioMs = ms; }
         public void nuevaEtapa() { this.etapaInicioMs = System.currentTimeMillis(); this.etapaIniciada = false; }
         public boolean isEtapaIniciada() { return etapaIniciada; }
         public void iniciarEtapa() { this.etapaIniciada = true; }
+
+        public boolean esPrimeroEnCola(Cola cola) {
+            if (cola.isEmpty()) return false;
+            Product primero = cola.peek();
+            return primero != null && primero.getBarcode().equals(this.producto.getBarcode());
+        }
 
         public Map<String, Object> toMap() {
             Map<String, Object> map = new HashMap<>();
@@ -118,13 +128,12 @@ public class GestorTransferencias {
 
         private String getNombreEtapa() {
             switch (etapa) {
-                case COLA_PREPARACION_ORIGEN: return "Preparación en Origen";
-                case COLA_SALIDA_ORIGEN: return "En Cola de Salida Origen";
+                case COLA_SALIDA_ORIGEN: return "Cola de Salida Origen";
                 case VIAJE: return "En Viaje";
                 case COLA_INGRESO_INTERMEDIA: return "Cola de Ingreso Intermedia";
-                case COLA_PREPARACION_INTERMEDIA: return "Preparación Intermedia";
+                case COLA_PREPARACION_INTERMEDIA: return "Preparacion Intermedia";
                 case COLA_SALIDA_INTERMEDIA: return "Cola de Salida Intermedia";
-                case VIAJE_SALIDA: return "En Viaje (después intermediaria)";
+                case VIAJE_SALIDA: return "En Viaje (despues intermediaria)";
                 case COLA_INGRESO_DESTINO: return "Cola de Ingreso Destino";
                 case ENTREGADO: return "Entregado";
                 default: return etapa.name();
@@ -197,7 +206,7 @@ public class GestorTransferencias {
 
         origen.eliminarProducto(producto.getName());
         producto.setEstado(Product.Estado.EN_TRANSITO);
-        origen.agregarAPreparacion(producto);
+        origen.agregarASalida(producto);
 
         List<TramoViaje> tramos = calcularTramosViaje(ruta);
 
@@ -283,48 +292,32 @@ public class GestorTransferencias {
         Sucursal sucursal;
         Product producto = t.getProducto();
         long ahora = System.currentTimeMillis();
-        long elapsedEnEtapa = ahora - t.getEtapaInicioMs();
 
         switch (t.getEtapa()) {
-            case COLA_PREPARACION_ORIGEN:
-                sucursal = gestor.getSucursal(t.getOrigenId());
-                if (sucursal != null && !sucursal.getColaPreparacion().isEmpty()) {
-                    producto = sucursal.getColaPreparacion().peek();
-                    if (producto != null && producto.getBarcode().equals(t.getProducto().getBarcode())) {
-                        if (!t.isEtapaIniciada()) {
-                            t.iniciarEtapa();
-                        }
-                        long esperaMs = (long) (sucursal.gettTraspaso() * 60 * 1000);
-                        double progreso = Math.min(elapsedEnEtapa / (double) esperaMs, 1.0);
-                        t.setProgresoGeneral(0.02 + progreso * 0.08);
-
-                        if (progreso >= 1.0) {
-                            sucursal.getColaPreparacion().pop();
-                            sucursal.agregarASalida(producto);
-                            t.setEtapa(EtapaTransferencia.COLA_SALIDA_ORIGEN);
-                            t.nuevaEtapa();
-                            t.setProgresoGeneral(0.10);
-                        }
-                    }
-                }
-                break;
-
             case COLA_SALIDA_ORIGEN:
                 sucursal = gestor.getSucursal(t.getOrigenId());
                 if (sucursal != null && !sucursal.getColaSalida().isEmpty()) {
-                    producto = sucursal.getColaSalida().peek();
-                    if (producto != null && producto.getBarcode().equals(t.getProducto().getBarcode())) {
-                        if (!t.isEtapaIniciada()) {
-                            t.iniciarEtapa();
+                    Cola cola = sucursal.getColaSalida();
+                    
+                    if (!t.isEtapaIniciada()) {
+                        t.iniciarEtapa();
+                    }
+                    
+                    if (t.esPrimeroEnCola(cola)) {
+                        if (t.getTiempoEsperaInicioMs() == 0) {
+                            t.setTiempoEsperaInicioMs(ahora);
                         }
+                        
                         long esperaMs = (long) (sucursal.gettDespacho() * 60 * 1000);
-                        double progreso = Math.min(elapsedEnEtapa / (double) esperaMs, 1.0);
+                        long elapsedEspera = ahora - t.getTiempoEsperaInicioMs();
+                        double progreso = Math.min(elapsedEspera / (double) esperaMs, 1.0);
                         t.setProgresoGeneral(0.10 + progreso * 0.10);
 
                         if (progreso >= 1.0) {
-                            sucursal.getColaSalida().pop();
+                            cola.pop();
                             t.setEtapa(EtapaTransferencia.VIAJE);
                             t.nuevaEtapa();
+                            t.setTiempoEsperaInicioMs(0);
                             t.setTramoActualIndex(0);
                             t.setProgresoGeneral(0.20);
                         }
@@ -334,9 +327,12 @@ public class GestorTransferencias {
 
             case VIAJE:
             case VIAJE_SALIDA:
+                long elapsedEnEtapa = ahora - t.getEtapaInicioMs();
+                
                 if (t.getTramoActualIndex() >= t.getTramosViaje().size()) {
                     t.setEtapa(EtapaTransferencia.COLA_INGRESO_DESTINO);
                     t.nuevaEtapa();
+                    t.setTiempoEsperaInicioMs(0);
                     return false;
                 }
 
@@ -369,6 +365,7 @@ public class GestorTransferencias {
                             t.setProgresoGeneral(0.65);
                         }
                         t.nuevaEtapa();
+                        t.setTiempoEsperaInicioMs(0);
                     }
                 }
                 break;
@@ -376,21 +373,30 @@ public class GestorTransferencias {
             case COLA_INGRESO_INTERMEDIA:
                 sucursal = gestor.getSucursal(t.getSucursalActualId());
                 if (sucursal != null) {
+                    Cola cola = sucursal.getColaIngreso();
+                    
                     if (!t.isEtapaIniciada()) {
                         t.iniciarEtapa();
                         sucursal.agregarAIngreso(producto);
                     }
-                    long esperaMs = (long) (sucursal.gettIngreso() * 60 * 1000);
-                    double progreso = Math.min(elapsedEnEtapa / (double) esperaMs, 1.0);
-                    t.setProgresoGeneral(0.65 + progreso * 0.05);
-
-                    if (progreso >= 1.0) {
-                        if (!sucursal.getColaIngreso().isEmpty()) {
-                            sucursal.getColaIngreso().pop();
+                    
+                    if (t.esPrimeroEnCola(cola)) {
+                        if (t.getTiempoEsperaInicioMs() == 0) {
+                            t.setTiempoEsperaInicioMs(ahora);
                         }
-                        t.setEtapa(EtapaTransferencia.COLA_PREPARACION_INTERMEDIA);
-                        t.nuevaEtapa();
-                        t.setProgresoGeneral(0.70);
+                        
+                        long esperaMs = (long) (sucursal.gettIngreso() * 60 * 1000);
+                        long elapsedEspera = ahora - t.getTiempoEsperaInicioMs();
+                        double progreso = Math.min(elapsedEspera / (double) esperaMs, 1.0);
+                        t.setProgresoGeneral(0.65 + progreso * 0.05);
+
+                        if (progreso >= 1.0) {
+                            cola.pop();
+                            t.setEtapa(EtapaTransferencia.COLA_PREPARACION_INTERMEDIA);
+                            t.nuevaEtapa();
+                            t.setTiempoEsperaInicioMs(0);
+                            t.setProgresoGeneral(0.70);
+                        }
                     }
                 }
                 break;
@@ -398,21 +404,30 @@ public class GestorTransferencias {
             case COLA_PREPARACION_INTERMEDIA:
                 sucursal = gestor.getSucursal(t.getSucursalActualId());
                 if (sucursal != null) {
+                    Cola cola = sucursal.getColaPreparacion();
+                    
                     if (!t.isEtapaIniciada()) {
                         t.iniciarEtapa();
                         sucursal.agregarAPreparacion(producto);
                     }
-                    long esperaMs = (long) (sucursal.gettTraspaso() * 60 * 1000);
-                    double progreso = Math.min(elapsedEnEtapa / (double) esperaMs, 1.0);
-                    t.setProgresoGeneral(0.70 + progreso * 0.05);
-
-                    if (progreso >= 1.0) {
-                        if (!sucursal.getColaPreparacion().isEmpty()) {
-                            sucursal.getColaPreparacion().pop();
+                    
+                    if (t.esPrimeroEnCola(cola)) {
+                        if (t.getTiempoEsperaInicioMs() == 0) {
+                            t.setTiempoEsperaInicioMs(ahora);
                         }
-                        t.setEtapa(EtapaTransferencia.COLA_SALIDA_INTERMEDIA);
-                        t.nuevaEtapa();
-                        t.setProgresoGeneral(0.75);
+                        
+                        long esperaMs = (long) (sucursal.gettTraspaso() * 60 * 1000);
+                        long elapsedEspera = ahora - t.getTiempoEsperaInicioMs();
+                        double progreso = Math.min(elapsedEspera / (double) esperaMs, 1.0);
+                        t.setProgresoGeneral(0.70 + progreso * 0.05);
+
+                        if (progreso >= 1.0) {
+                            cola.pop();
+                            t.setEtapa(EtapaTransferencia.COLA_SALIDA_INTERMEDIA);
+                            t.nuevaEtapa();
+                            t.setTiempoEsperaInicioMs(0);
+                            t.setProgresoGeneral(0.75);
+                        }
                     }
                 }
                 break;
@@ -420,22 +435,31 @@ public class GestorTransferencias {
             case COLA_SALIDA_INTERMEDIA:
                 sucursal = gestor.getSucursal(t.getSucursalActualId());
                 if (sucursal != null) {
+                    Cola cola = sucursal.getColaSalida();
+                    
                     if (!t.isEtapaIniciada()) {
                         t.iniciarEtapa();
                         sucursal.agregarASalida(producto);
                     }
-                    long esperaMs = (long) (sucursal.gettDespacho() * 60 * 1000);
-                    double progreso = Math.min(elapsedEnEtapa / (double) esperaMs, 1.0);
-                    t.setProgresoGeneral(0.75 + progreso * 0.05);
-
-                    if (progreso >= 1.0) {
-                        if (!sucursal.getColaSalida().isEmpty()) {
-                            sucursal.getColaSalida().pop();
+                    
+                    if (t.esPrimeroEnCola(cola)) {
+                        if (t.getTiempoEsperaInicioMs() == 0) {
+                            t.setTiempoEsperaInicioMs(ahora);
                         }
-                        t.setTramoActualIndex(t.getTramoActualIndex() + 1);
-                        t.setEtapa(EtapaTransferencia.VIAJE_SALIDA);
-                        t.nuevaEtapa();
-                        t.setProgresoGeneral(0.80);
+                        
+                        long esperaMs = (long) (sucursal.gettDespacho() * 60 * 1000);
+                        long elapsedEspera = ahora - t.getTiempoEsperaInicioMs();
+                        double progreso = Math.min(elapsedEspera / (double) esperaMs, 1.0);
+                        t.setProgresoGeneral(0.75 + progreso * 0.05);
+
+                        if (progreso >= 1.0) {
+                            cola.pop();
+                            t.setTramoActualIndex(t.getTramoActualIndex() + 1);
+                            t.setEtapa(EtapaTransferencia.VIAJE_SALIDA);
+                            t.nuevaEtapa();
+                            t.setTiempoEsperaInicioMs(0);
+                            t.setProgresoGeneral(0.80);
+                        }
                     }
                 }
                 break;
@@ -443,22 +467,31 @@ public class GestorTransferencias {
             case COLA_INGRESO_DESTINO:
                 sucursal = gestor.getSucursal(t.getDestinoId());
                 if (sucursal != null) {
+                    Cola cola = sucursal.getColaIngreso();
+                    
                     if (!t.isEtapaIniciada()) {
                         t.iniciarEtapa();
                         sucursal.agregarAIngreso(producto);
                     }
-                    long esperaMs = (long) (sucursal.gettIngreso() * 60 * 1000);
-                    double progreso = Math.min(elapsedEnEtapa / (double) esperaMs, 1.0);
-                    t.setProgresoGeneral(0.80 + progreso * 0.15);
-
-                    if (progreso >= 1.0) {
-                        if (!sucursal.getColaIngreso().isEmpty()) {
-                            sucursal.getColaIngreso().pop();
+                    
+                    if (t.esPrimeroEnCola(cola)) {
+                        if (t.getTiempoEsperaInicioMs() == 0) {
+                            t.setTiempoEsperaInicioMs(ahora);
                         }
-                        producto.setEstado(Product.Estado.EN_TRANSITO);
-                        t.setEtapa(EtapaTransferencia.ENTREGADO);
-                        t.nuevaEtapa();
-                        t.setProgresoGeneral(0.95);
+                        
+                        long esperaMs = (long) (sucursal.gettIngreso() * 60 * 1000);
+                        long elapsedEspera = ahora - t.getTiempoEsperaInicioMs();
+                        double progreso = Math.min(elapsedEspera / (double) esperaMs, 1.0);
+                        t.setProgresoGeneral(0.80 + progreso * 0.15);
+
+                        if (progreso >= 1.0) {
+                            cola.pop();
+                            producto.setEstado(Product.Estado.EN_TRANSITO);
+                            t.setEtapa(EtapaTransferencia.ENTREGADO);
+                            t.nuevaEtapa();
+                            t.setTiempoEsperaInicioMs(0);
+                            t.setProgresoGeneral(0.95);
+                        }
                     }
                 }
                 break;
