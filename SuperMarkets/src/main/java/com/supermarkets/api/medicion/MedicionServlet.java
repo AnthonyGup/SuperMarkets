@@ -12,10 +12,10 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 @WebServlet("/api/medicion/*")
 public class MedicionServlet extends HttpServlet {
@@ -30,21 +30,25 @@ public class MedicionServlet extends HttpServlet {
         try {
             String pathInfo = request.getPathInfo();
 
-            if (pathInfo != null && pathInfo.endsWith("/busqueda")) {
-                medirBusqueda(request, response, startTime);
-                return;
-            }
-
             if (pathInfo != null && pathInfo.endsWith("/comparar")) {
-                compararEstructuras(request, response, startTime);
+                compararBusquedas(request, response, startTime);
                 return;
             }
 
-            List<String> endpoints = new ArrayList<>();
-            endpoints.add("GET /api/medicion/busqueda?sucursal={id}&tipo={secuencial/binaria/hash}&nombre={nombre}");
-            endpoints.add("GET /api/medicion/comparar?sucursal={id}&operacion={buscar/insertar}&nombre={nombre}");
+            List<String> info = new ArrayList<>();
+            info.add("=== MEDICION DE BUSQUEDA ===");
+            info.add("GET /api/medicion/comparar?sucursal={id}&nombre={nombre}&barcode={barcode}&iteraciones={n}");
+            info.add("Compara: Lista vs AVL vs Hash");
+            info.add("- nombre: para buscar por Lista y AVL");
+            info.add("- barcode: para buscar por Hash");
+            info.add("- iteraciones: numero de repeticiones (default 1)");
+            info.add("");
+            info.add("Complejidad:");
+            info.add("- Lista (secuencial): O(n)");
+            info.add("- AVL (balanceado): O(log n)");
+            info.add("- Hash: O(1) promedio");
 
-            ApiResponse<List<String>> apiResponse = ApiResponse.success(endpoints);
+            ApiResponse<List<String>> apiResponse = ApiResponse.success(info);
             apiResponse.setTiempoMs(System.currentTimeMillis() - startTime);
             response.getWriter().write(gson.toJson(apiResponse));
 
@@ -56,137 +60,143 @@ public class MedicionServlet extends HttpServlet {
         }
     }
 
-    private void medirBusqueda(HttpServletRequest request, HttpServletResponse response, long startTime) throws IOException {
+    private void compararBusquedas(HttpServletRequest request, HttpServletResponse response, long startTime) throws IOException {
         String sucursalId = request.getParameter("sucursal");
-        String tipo = request.getParameter("tipo");
         String nombre = request.getParameter("nombre");
+        String barcode = request.getParameter("barcode");
 
-        if (sucursalId == null || tipo == null || nombre == null) {
-            ApiResponse<Object> errorResponse = ApiResponse.error("Parámetros requeridos: sucursal, tipo, nombre");
-            errorResponse.setTiempoMs(System.currentTimeMillis() - startTime);
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write(gson.toJson(errorResponse));
+        if (sucursalId == null) {
+            sendError(response, "Parametro requerido: sucursal", startTime, HttpServletResponse.SC_BAD_REQUEST);
             return;
         }
 
         Sucursal sucursal = gestor.getSucursal(sucursalId);
         if (sucursal == null) {
-            ApiResponse<Object> errorResponse = ApiResponse.error("Sucursal no encontrada");
-            errorResponse.setTiempoMs(System.currentTimeMillis() - startTime);
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            response.getWriter().write(gson.toJson(errorResponse));
+            sendError(response, "Sucursal no encontrada: " + sucursalId, startTime, HttpServletResponse.SC_NOT_FOUND);
             return;
         }
 
-        long tiempoInicio = System.nanoTime();
-        Product resultado = null;
-
-        switch (tipo.toLowerCase()) {
-            case "secuencial":
-            case "lista":
-                resultado = buscarSecuencial(sucursal, nombre);
-                break;
-            case "binaria":
-                resultado = sucursal.buscarPorNombre(nombre);
-                break;
-            case "hash":
-                resultado = sucursal.buscarPorBarcode(buscarBarcodePorNombre(sucursal, nombre));
-                break;
-            default:
-                ApiResponse<Object> errorResponse = ApiResponse.error("Tipo no válido: " + tipo);
-                errorResponse.setTiempoMs(System.currentTimeMillis() - startTime);
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                response.getWriter().write(gson.toJson(errorResponse));
-                return;
+        int iteraciones = 1;
+        String iteracionesStr = request.getParameter("iteraciones");
+        if (iteracionesStr != null) {
+            try {
+                iteraciones = Math.max(1, Integer.parseInt(iteracionesStr));
+            } catch (NumberFormatException ignored) {}
         }
 
-        double tiempoMs = (System.nanoTime() - tiempoInicio) / 1_000_000.0;
+        Product[] productos = sucursal.getInventarioLista().listarTodos();
+        int totalProductos = productos != null ? productos.length : 0;
 
-        ResultadoMedicion medicion = new ResultadoMedicion(
-                tipo,
-                "busqueda",
-                tiempoMs,
-                sucursal.getTotalProductos()
-        );
-        medicion.getDetalles().add("encontrado: " + (resultado != null));
-        medicion.getDetalles().add("producto: " + (resultado != null ? resultado.getName() : "null"));
-
-        ApiResponse<ResultadoMedicion> apiResponse = ApiResponse.success(medicion);
-        apiResponse.setTiempoMs(System.currentTimeMillis() - startTime);
-        response.getWriter().write(gson.toJson(apiResponse));
-    }
-
-    private void compararEstructuras(HttpServletRequest request, HttpServletResponse response, long startTime) throws IOException {
-        String sucursalId = request.getParameter("sucursal");
-        String operacion = request.getParameter("operacion");
-        String nombre = request.getParameter("nombre");
-
-        if (sucursalId == null || operacion == null) {
-            ApiResponse<Object> errorResponse = ApiResponse.error("Parámetros requeridos: sucursal, operacion");
-            errorResponse.setTiempoMs(System.currentTimeMillis() - startTime);
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write(gson.toJson(errorResponse));
+        if (totalProductos == 0) {
+            sendError(response, "La sucursal no tiene productos", startTime, HttpServletResponse.SC_BAD_REQUEST);
             return;
         }
 
-        Sucursal sucursal = gestor.getSucursal(sucursalId);
-        if (sucursal == null) {
-            ApiResponse<Object> errorResponse = ApiResponse.error("Sucursal no encontrada");
-            errorResponse.setTiempoMs(System.currentTimeMillis() - startTime);
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            response.getWriter().write(gson.toJson(errorResponse));
-            return;
+        if ((nombre == null || nombre.isEmpty()) && (barcode == null || barcode.isEmpty())) {
+            Random rand = new Random();
+            int idx = rand.nextInt(totalProductos);
+            nombre = productos[idx].getName();
+            barcode = productos[idx].getBarcode();
+        }
+
+        if (nombre == null || nombre.isEmpty()) {
+            Product p = sucursal.buscarPorBarcode(barcode);
+            if (p != null) nombre = p.getName();
+            else nombre = "NO_ENCONTRADO";
+        }
+
+        if (barcode == null || barcode.isEmpty()) {
+            Product p = buscarSecuencial(sucursal, nombre);
+            if (p != null) barcode = p.getBarcode();
+            else barcode = "NO_ENCONTRADO";
         }
 
         List<ResultadoMedicion> resultados = new ArrayList<>();
-        int totalProductos = sucursal.getTotalProductos();
 
-        if (operacion.equalsIgnoreCase("buscar")) {
-            String nombreABuscar = nombre != null ? nombre : "no_existe";
-            String barcode = buscarBarcodePorNombre(sucursal, nombreABuscar);
-
-            resultados.add(medirBusquedaSecuencial(sucursal, nombreABuscar, totalProductos));
-            resultados.add(medirBusquedaBinaria(sucursal, nombreABuscar, totalProductos));
-            resultados.add(medirBusquedaHash(sucursal, barcode, totalProductos));
-        } else if (operacion.equalsIgnoreCase("insertar")) {
-            resultados.add(new ResultadoMedicion("lista", "insercion", 0.0, totalProductos));
-            resultados.add(new ResultadoMedicion("avl", "insercion", 0.0, totalProductos));
-            resultados.add(new ResultadoMedicion("b", "insercion", 0.0, totalProductos));
-            resultados.add(new ResultadoMedicion("bplus", "insercion", 0.0, totalProductos));
-            resultados.add(new ResultadoMedicion("hash", "insercion", 0.0, totalProductos));
-        }
+        resultados.add(medirBusquedaLista(sucursal, nombre, iteraciones, totalProductos));
+        resultados.add(medirBusquedaAvl(sucursal, nombre, iteraciones, totalProductos));
+        resultados.add(medirBusquedaHash(sucursal, barcode, iteraciones, totalProductos));
 
         ApiResponse<List<ResultadoMedicion>> apiResponse = ApiResponse.success(resultados);
         apiResponse.setTiempoMs(System.currentTimeMillis() - startTime);
         response.getWriter().write(gson.toJson(apiResponse));
     }
 
-    private ResultadoMedicion medirBusquedaSecuencial(Sucursal sucursal, String nombre, int total) {
-        long inicio = System.nanoTime();
-        Product resultado = buscarSecuencial(sucursal, nombre);
-        double tiempoMs = (System.nanoTime() - inicio) / 1_000_000.0;
+    private ResultadoMedicion medirBusquedaLista(Sucursal sucursal, String nombre, int iteraciones, int total) {
+        long tiempoTotalNs = 0;
+        boolean encontrado = false;
 
-        return new ResultadoMedicion("lista", "busqueda", tiempoMs, total);
+        for (int i = 0; i < iteraciones; i++) {
+            long inicio = System.nanoTime();
+            Product resultado = buscarSecuencial(sucursal, nombre);
+            tiempoTotalNs += (System.nanoTime() - inicio);
+            if (resultado != null) encontrado = true;
+        }
+
+        double tiempoPromedioMs = (tiempoTotalNs / (double) iteraciones) / 1_000_000.0;
+
+        ResultadoMedicion resultado = new ResultadoMedicion("lista", "busqueda", tiempoPromedioMs * iteraciones, total);
+        resultado.setIteraciones(iteraciones);
+        resultado.setTiempoPromedioMs(tiempoPromedioMs);
+        resultado.setClaveBusqueda(nombre);
+        resultado.setComplejidad("O(n)");
+        resultado.getDetalles().add("encontrado: " + encontrado);
+        resultado.getDetalles().add("metodo: secuencial");
+
+        return resultado;
     }
 
-    private ResultadoMedicion medirBusquedaBinaria(Sucursal sucursal, String nombre, int total) {
-        long inicio = System.nanoTime();
-        Product resultado = sucursal.buscarPorNombre(nombre);
-        double tiempoMs = (System.nanoTime() - inicio) / 1_000_000.0;
+    private ResultadoMedicion medirBusquedaAvl(Sucursal sucursal, String nombre, int iteraciones, int total) {
+        long tiempoTotalNs = 0;
+        boolean encontrado = false;
 
-        return new ResultadoMedicion("avl", "busqueda", tiempoMs, total);
+        for (int i = 0; i < iteraciones; i++) {
+            long inicio = System.nanoTime();
+            Product resultado = sucursal.buscarPorNombre(nombre);
+            tiempoTotalNs += (System.nanoTime() - inicio);
+            if (resultado != null) encontrado = true;
+        }
+
+        double tiempoPromedioMs = (tiempoTotalNs / (double) iteraciones) / 1_000_000.0;
+
+        ResultadoMedicion resultado = new ResultadoMedicion("avl", "busqueda", tiempoPromedioMs * iteraciones, total);
+        resultado.setIteraciones(iteraciones);
+        resultado.setTiempoPromedioMs(tiempoPromedioMs);
+        resultado.setClaveBusqueda(nombre);
+        resultado.setComplejidad("O(log n)");
+        resultado.getDetalles().add("encontrado: " + encontrado);
+        resultado.getDetalles().add("metodo: arbol balanceado");
+
+        return resultado;
     }
 
-    private ResultadoMedicion medirBusquedaHash(Sucursal sucursal, String barcode, int total) {
-        long inicio = System.nanoTime();
-        Product resultado = sucursal.buscarPorBarcode(barcode);
-        double tiempoMs = (System.nanoTime() - inicio) / 1_000_000.0;
+    private ResultadoMedicion medirBusquedaHash(Sucursal sucursal, String barcode, int iteraciones, int total) {
+        long tiempoTotalNs = 0;
+        boolean encontrado = false;
 
-        return new ResultadoMedicion("hash", "busqueda", tiempoMs, total);
+        for (int i = 0; i < iteraciones; i++) {
+            long inicio = System.nanoTime();
+            Product resultado = sucursal.buscarPorBarcode(barcode);
+            tiempoTotalNs += (System.nanoTime() - inicio);
+            if (resultado != null) encontrado = true;
+        }
+
+        double tiempoPromedioMs = (tiempoTotalNs / (double) iteraciones) / 1_000_000.0;
+
+        ResultadoMedicion resultado = new ResultadoMedicion("hash", "busqueda", tiempoPromedioMs * iteraciones, total);
+        resultado.setIteraciones(iteraciones);
+        resultado.setTiempoPromedioMs(tiempoPromedioMs);
+        resultado.setClaveBusqueda(barcode);
+        resultado.setComplejidad("O(1) promedio");
+        resultado.getDetalles().add("encontrado: " + encontrado);
+        resultado.getDetalles().add("metodo: tabla hash");
+
+        return resultado;
     }
 
     private Product buscarSecuencial(Sucursal sucursal, String nombre) {
         Product[] productos = sucursal.getInventarioLista().listarTodos();
+        if (productos == null) return null;
         for (Product p : productos) {
             if (p != null && p.getName().equalsIgnoreCase(nombre)) {
                 return p;
@@ -195,8 +205,10 @@ public class MedicionServlet extends HttpServlet {
         return null;
     }
 
-    private String buscarBarcodePorNombre(Sucursal sucursal, String nombre) {
-        Product p = sucursal.buscarPorNombre(nombre);
-        return p != null ? p.getBarcode() : "no_existe";
+    private void sendError(HttpServletResponse response, String mensaje, long startTime, int status) throws IOException {
+        ApiResponse<Object> errorResponse = ApiResponse.error(mensaje);
+        errorResponse.setTiempoMs(System.currentTimeMillis() - startTime);
+        response.setStatus(status);
+        response.getWriter().write(gson.toJson(errorResponse));
     }
 }

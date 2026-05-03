@@ -2,8 +2,12 @@ export interface ResultadoMedicion {
   estructura: string;
   operacion: string;
   tiempoMs: number;
+  tiempoPromedioMs: number;
   cantidadElementos: number;
-  detalles?: string[];
+  iteraciones: number;
+  complejidad: string;
+  claveBusqueda: string;
+  detalles: string[];
 }
 
 export interface ApiResponse<T> {

@@ -12,19 +12,20 @@ export class MedicionService {
 
   constructor(private readonly http: HttpClient) {}
 
-  medirBusqueda(sucursalId: string, tipo: string, nombre: string): Observable<ApiResponse<ResultadoMedicion>> {
-    const params = new HttpParams()
-      .set('sucursal', sucursalId)
-      .set('tipo', tipo)
-      .set('nombre', nombre);
-    return this.http.get<ApiResponse<ResultadoMedicion>>(`${this.apiUrl}/busqueda`, { params });
-  }
+  comparar(
+    sucursalId: string,
+    params: {
+      nombre?: string;
+      barcode?: string;
+      iteraciones?: number;
+    } = {}
+  ): Observable<ApiResponse<ResultadoMedicion[]>> {
+    let httpParams = new HttpParams().set('sucursal', sucursalId);
 
-  comparar(sucursalId: string, operacion: string, nombre?: string): Observable<ApiResponse<ResultadoMedicion[]>> {
-    let params = new HttpParams()
-      .set('sucursal', sucursalId)
-      .set('operacion', operacion);
-    if (nombre) params = params.set('nombre', nombre);
-    return this.http.get<ApiResponse<ResultadoMedicion[]>>(`${this.apiUrl}/comparar`, { params });
+    if (params.nombre) httpParams = httpParams.set('nombre', params.nombre);
+    if (params.barcode) httpParams = httpParams.set('barcode', params.barcode);
+    if (params.iteraciones) httpParams = httpParams.set('iteraciones', params.iteraciones.toString());
+
+    return this.http.get<ApiResponse<ResultadoMedicion[]>>(`${this.apiUrl}/comparar`, { params: httpParams });
   }
 }
