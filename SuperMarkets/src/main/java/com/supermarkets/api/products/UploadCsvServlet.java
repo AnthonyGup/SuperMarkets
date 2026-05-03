@@ -1,5 +1,6 @@
 package com.supermarkets.api.products;
 
+import com.supermarkets.api.GestorCentral;
 import com.supermarkets.helpers.CSVLoader;
 import com.supermarkets.helpers.CSVLoader.CsvType;
 import com.supermarkets.helpers.LoadStats;
@@ -25,6 +26,8 @@ import java.util.List;
 @WebServlet("/api/products/upload")
 @MultipartConfig
 public class UploadCsvServlet extends HttpServlet {
+    private final GestorCentral gestor = GestorCentral.getInstancia();
+
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         response.setContentType("application/json;charset=UTF-8");
@@ -54,31 +57,31 @@ public class UploadCsvServlet extends HttpServlet {
         try {
             CSVLoader loader = new CSVLoader();
             CsvType type = CsvType.fromValue(csvType);
-            int successCount;
-            List<String> errorDetails;
+            int successCount = 0;
 
             switch (type) {
                 case SUCURSALES:
                     List<Sucursal> sucursales = loader.loadSucursales(tempFile, hasHeader);
+                    gestor.cargarSucursales(sucursales);
                     successCount = sucursales.size();
-                    errorDetails = loader.getErrorDetails();
                     break;
                 case CONEXIONES:
                     List<ConexionSucursal> conexiones = loader.loadConexiones(tempFile, hasHeader);
+                    gestor.cargarConexiones(conexiones);
                     successCount = conexiones.size();
-                    errorDetails = loader.getErrorDetails();
                     break;
                 case CATALOGO:
                     List<Product> products = loader.loadCatalogo(tempFile, hasHeader);
+                    gestor.cargarProductos(products);
                     successCount = products.size();
-                    errorDetails = loader.getErrorDetails();
                     break;
                 default:
                     throw new IllegalArgumentException("Tipo de CSV desconocido: " + csvType);
             }
 
             LoadStats stats = loader.getLoadStats();
-
+            List<String> errorDetails = loader.getErrorDetails();
+            String logPath = loader.getErrorLogPath();
             int totalErrors = stats.erroresLinea + stats.erroresDuplicados + stats.erroresFecha
                     + stats.erroresNumeros + stats.erroresOtros;
 
@@ -86,23 +89,29 @@ public class UploadCsvServlet extends HttpServlet {
                     + ". Errores: " + totalErrors + ".";
 
             response.setStatus(HttpServletResponse.SC_OK);
-            response.getWriter().write(buildJson(true, message, successCount, totalErrors, stats, errorDetails));
+            response.getWriter().write(buildJson(true, message, successCount, totalErrors, stats, errorDetails, logPath));
+
         } catch (RuntimeException ex) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            response.getWriter().write(buildJson(false, ex.getMessage(), 0, 0, null, null));
+            response.getWriter().write(buildJson(false, ex.getMessage(), 0, 0, null, null, null));
         } finally {
             Files.deleteIfExists(tempFile);
         }
     }
 
     private String buildJson(boolean success, String message, int recordsLoaded, int totalErrors, LoadStats stats,
-                             List<String> errorDetails) {
+                             List<String> errorDetails, String logPath) {
         StringBuilder json = new StringBuilder();
         json.append('{');
         json.append("\"success\":").append(success).append(',');
         json.append("\"message\":\"").append(escape(message)).append("\",");
         json.append("\"recordsLoaded\":").append(recordsLoaded).append(',');
         json.append("\"totalErrors\":").append(totalErrors);
+
+        if (logPath != null && !logPath.isEmpty()) {
+            json.append(',');
+            json.append("\"logPath\":\"").append(escape(logPath)).append("\"");
+        }
 
         if (errorDetails != null && !errorDetails.isEmpty()) {
             json.append(',');

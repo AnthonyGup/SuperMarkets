@@ -19,14 +19,8 @@ public class Grafo {
         return this.primero == null;
     }
 
-    public int contarVertices() {
-        int count = 0;
-        NodoGrafo temp = primero;
-        while (temp != null) {
-            count++;
-            temp = temp.getSiguiente();
-        }
-        return count;
+    public int getTamanio() {
+        return this.tamanio;
     }
 
     public void nuevoNodo(String id, Sucursal dato) {
@@ -79,20 +73,12 @@ public class Grafo {
         nuevaArista(id2, id1, peso);
     }
 
-    public boolean existeArista(String origenId, String destinoId) {
-        NodoGrafo nodo = getVertice(origenId);
-        if (nodo != null) {
-            return nodo.getLista().buscar(destinoId);
-        }
-        return false;
-    }
-
     public List<String> dijkstra(String etiquetaOrigen, String etiquetaDestino) {
         if (!existeVertice(etiquetaOrigen) || !existeVertice(etiquetaDestino)) {
             return null;
         }
 
-        int n = contarVertices();
+        int n = getTamanio();
         String[] vertices = getVerticesIds();
 
         float[] distancias = new float[n];
@@ -164,75 +150,25 @@ public class Grafo {
         return camino;
     }
 
-    public List<String> bfs(String inicioId) {
-        List<String> resultado = new ArrayList<>();
-        if (!existeVertice(inicioId)) {
-            return resultado;
+    private String[] getVerticesIds() {
+        int n = getTamanio();
+        String[] ids = new String[n];
+        NodoGrafo temp = primero;
+        int i = 0;
+        while (temp != null) {
+            ids[i++] = temp.getId();
+            temp = temp.getSiguiente();
         }
-
-        String[] vertices = getVerticesIds();
-        int n = vertices.length;
-        boolean[] visitado = new boolean[n];
-        List<String> cola = new ArrayList<>();
-
-        int inicioIdx = getIndice(vertices, inicioId);
-        cola.add(inicioId);
-        visitado[inicioIdx] = true;
-
-        while (!cola.isEmpty()) {
-            String actualId = cola.remove(0);
-            resultado.add(actualId);
-
-            NodoGrafo nodo = getVertice(actualId);
-            Arco arco = nodo.getLista().getPrimero();
-
-            while (arco != null) {
-                String vId = arco.getDestinoId();
-                int vIdx = getIndice(vertices, vId);
-
-                if (!visitado[vIdx]) {
-                    visitado[vIdx] = true;
-                    cola.add(vId);
-                }
-                arco = arco.getSiguiente();
-            }
-        }
-
-        return resultado;
+        return ids;
     }
 
-    public List<String> dfs(String inicioId) {
-        List<String> resultado = new ArrayList<>();
-        if (!existeVertice(inicioId)) {
-            return resultado;
-        }
-
-        String[] vertices = getVerticesIds();
-        int n = vertices.length;
-        boolean[] visitado = new boolean[n];
-        int inicioIdx = getIndice(vertices, inicioId);
-
-        dfsRec(vertices, inicioIdx, visitado, resultado);
-
-        return resultado;
-    }
-
-    private void dfsRec(String[] vertices, int idx, boolean[] visitado, List<String> resultado) {
-        visitado[idx] = true;
-        resultado.add(vertices[idx]);
-
-        NodoGrafo nodo = getVertice(vertices[idx]);
-        Arco arco = nodo.getLista().getPrimero();
-
-        while (arco != null) {
-            String vId = arco.getDestinoId();
-            int vIdx = getIndice(vertices, vId);
-
-            if (!visitado[vIdx]) {
-                dfsRec(vertices, vIdx, visitado, resultado);
+    private int getIndice(String[] array, String valor) {
+        for (int i = 0; i < array.length; i++) {
+            if (array[i].equals(valor)) {
+                return i;
             }
-            arco = arco.getSiguiente();
         }
+        return -1;
     }
 
     public List<NodoGrafo> getVertices() {
@@ -253,24 +189,25 @@ public class Grafo {
         return 0;
     }
 
-    private String[] getVerticesIds() {
-        int n = contarVertices();
-        String[] ids = new String[n];
-        NodoGrafo temp = primero;
-        int i = 0;
-        while (temp != null) {
-            ids[i++] = temp.getId();
-            temp = temp.getSiguiente();
+    public float obtenerPeso(String origenId, String destinoId) {
+        NodoGrafo nodo = getVertice(origenId);
+        if (nodo != null) {
+            return nodo.getLista().getPeso(destinoId);
         }
-        return ids;
+        return 0;
     }
 
-    private int getIndice(String[] array, String valor) {
-        for (int i = 0; i < array.length; i++) {
-            if (array[i].equals(valor)) {
-                return i;
+    public List<Arco> getAristas() {
+        List<Arco> aristas = new ArrayList<>();
+        NodoGrafo temp = primero;
+        while (temp != null) {
+            Arco arco = temp.getLista().getPrimero();
+            while (arco != null) {
+                aristas.add(arco);
+                arco = arco.getSiguiente();
             }
+            temp = temp.getSiguiente();
         }
-        return -1;
+        return aristas;
     }
 }

@@ -7,6 +7,10 @@ import java.util.Locale;
 public class ArbolAvl {
     private NodoAvl raiz;
 
+    public NodoAvl getRaiz() {
+        return raiz;
+    }
+
     public void insertar(Product valor) {
         validarProducto(valor, "insertar");
         if (buscar(valor.getName())) {

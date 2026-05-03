@@ -6,12 +6,18 @@ import com.supermarkets.pojo.ConexionSucursal;
 import com.supermarkets.pojo.Product;
 import com.supermarkets.pojo.Sucursal;
 
+import java.io.FileWriter;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class CSVLoader {
 
@@ -41,11 +47,14 @@ public class CSVLoader {
 
     private final LoadStats stats = new LoadStats();
     private final List<String> errorDetails = new ArrayList<>();
+    private final Set<String> processedBarcodes = new HashSet<>();
+    private Path currentLogPath;
 
     public CSVLoader() {}
 
     public List<Sucursal> loadSucursales(Path filePath, boolean hasHeader) throws IOException {
         resetStats();
+        initErrorLog(filePath);
         List<Sucursal> sucursales = new ArrayList<>();
 
         try (CSVReader reader = new CSVReader(new FileReader(filePath.toFile()))) {
@@ -82,8 +91,17 @@ public class CSVLoader {
                         continue;
                     }
 
+                    if (sucursal.gettIngreso() <= 0 || sucursal.gettTraspaso() <= 0 || sucursal.gettDespacho() <= 0) {
+                        registerError("Linea " + (i + 1) + ": Tiempos deben ser mayores a 0");
+                        stats.erroresNumeros++;
+                        continue;
+                    }
+
                     sucursales.add(sucursal);
                     stats.productosExitosos++;
+                } catch (NumberFormatException e) {
+                    registerError("Linea " + (i + 1) + ": Formato numerico invalido - " + e.getMessage());
+                    stats.erroresNumeros++;
                 } catch (Exception e) {
                     registerError("Linea " + (i + 1) + ": " + e.getMessage());
                     stats.erroresOtros++;
@@ -96,6 +114,7 @@ public class CSVLoader {
 
     public List<ConexionSucursal> loadConexiones(Path filePath, boolean hasHeader) throws IOException {
         resetStats();
+        initErrorLog(filePath);
         List<ConexionSucursal> conexiones = new ArrayList<>();
 
         try (CSVReader reader = new CSVReader(new FileReader(filePath.toFile()))) {
@@ -136,8 +155,17 @@ public class CSVLoader {
                         continue;
                     }
 
+                    if (conexion.getTiempo() < 0 || conexion.getCosto() < 0) {
+                        registerError("Linea " + (i + 1) + ": Tiempo/Costo no pueden ser negativos");
+                        stats.erroresNumeros++;
+                        continue;
+                    }
+
                     conexiones.add(conexion);
                     stats.productosExitosos++;
+                } catch (NumberFormatException e) {
+                    registerError("Linea " + (i + 1) + ": Formato numerico invalido - " + e.getMessage());
+                    stats.erroresNumeros++;
                 } catch (Exception e) {
                     registerError("Linea " + (i + 1) + ": " + e.getMessage());
                     stats.erroresOtros++;
@@ -150,6 +178,8 @@ public class CSVLoader {
 
     public List<Product> loadCatalogo(Path filePath, boolean hasHeader) throws IOException {
         resetStats();
+        processedBarcodes.clear();
+        initErrorLog(filePath);
         List<Product> products = new ArrayList<>();
 
         try (CSVReader reader = new CSVReader(new FileReader(filePath.toFile()))) {
@@ -172,24 +202,48 @@ public class CSVLoader {
                 }
 
                 try {
+                    String barcode = trim(fields[2]);
+
+                    if (barcode == null || barcode.isEmpty()) {
+                        registerError("Linea " + (i + 1) + ": Codigo de barra vacio");
+                        stats.erroresOtros++;
+                        continue;
+                    }
+
+                    if (processedBarcodes.contains(barcode)) {
+                        registerError("Linea " + (i + 1) + ": Codigo de barra duplicado '" + barcode + "'");
+                        stats.erroresDuplicados++;
+                        continue;
+                    }
+
+                    if (!isValidDate(trim(fields[4]))) {
+                        registerError("Linea " + (i + 1) + ": Formato de fecha invalido '" + fields[4] + "' (usar YYYY-MM-DD)");
+                        stats.erroresFecha++;
+                        continue;
+                    }
+
                     Product product = new Product();
                     product.setSucursalId(trim(fields[0]));
                     product.setName(trim(fields[1]));
-                    product.setBarcode(trim(fields[2]));
+                    product.setBarcode(barcode);
                     product.setCategory(trim(fields[3]));
                     product.setExpiryDate(trim(fields[4]));
                     product.setBrand(trim(fields[5]));
                     product.setPrice(parseDouble(trim(fields[6])));
                     product.setStock(parseInt(trim(fields[7])));
 
-                    if (product.getBarcode() == null || product.getBarcode().isEmpty()) {
-                        registerError("Linea " + (i + 1) + ": Codigo de barra vacio");
-                        stats.erroresOtros++;
+                    if (product.getPrice() < 0 || product.getStock() < 0) {
+                        registerError("Linea " + (i + 1) + ": Precio/Stock no pueden ser negativos");
+                        stats.erroresNumeros++;
                         continue;
                     }
 
+                    processedBarcodes.add(barcode);
                     products.add(product);
                     stats.productosExitosos++;
+                } catch (NumberFormatException e) {
+                    registerError("Linea " + (i + 1) + ": Formato numerico invalido - " + e.getMessage());
+                    stats.erroresNumeros++;
                 } catch (Exception e) {
                     registerError("Linea " + (i + 1) + ": " + e.getMessage());
                     stats.erroresOtros++;
@@ -200,6 +254,57 @@ public class CSVLoader {
         return products;
     }
 
+    private void initErrorLog(Path sourceFile) throws IOException {
+        Path logDir = sourceFile.getParent();
+        if (logDir == null) {
+            logDir = Path.of(System.getProperty("java.io.tmpdir"));
+        }
+
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String fileName = sourceFile.getFileName().toString().replace(".csv", "");
+        this.currentLogPath = logDir.resolve("errors_" + fileName + "_" + timestamp + ".log");
+
+        Files.createFile(this.currentLogPath);
+    }
+
+    private void registerError(String message) {
+        errorDetails.add(message);
+        writeToErrorLog(message);
+    }
+
+    private void writeToErrorLog(String message) {
+        if (currentLogPath == null) return;
+
+        try (PrintWriter writer = new PrintWriter(new FileWriter(currentLogPath.toFile(), true))) {
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            writer.println("[" + timestamp + "] " + message);
+        } catch (IOException e) {
+            System.err.println("No se pudo escribir al log de errores: " + e.getMessage());
+        }
+    }
+
+    private boolean isValidDate(String dateStr) {
+        if (dateStr == null || dateStr.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            String[] parts = dateStr.split("-");
+            if (parts.length != 3) return false;
+
+            int year = Integer.parseInt(parts[0]);
+            int month = Integer.parseInt(parts[1]);
+            int day = Integer.parseInt(parts[2]);
+
+            if (year < 1900 || year > 2100) return false;
+            if (month < 1 || month > 12) return false;
+            if (day < 1 || day > 31) return false;
+
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public LoadStats getLoadStats() {
         return new LoadStats(stats);
     }
@@ -208,8 +313,13 @@ public class CSVLoader {
         return new ArrayList<>(errorDetails);
     }
 
+    public String getErrorLogPath() {
+        return currentLogPath != null ? currentLogPath.toString() : null;
+    }
+
     private void resetStats() {
         errorDetails.clear();
+        processedBarcodes.clear();
         stats.totalLineas = 0;
         stats.productosExitosos = 0;
         stats.erroresLinea = 0;
@@ -217,10 +327,6 @@ public class CSVLoader {
         stats.erroresFecha = 0;
         stats.erroresNumeros = 0;
         stats.erroresOtros = 0;
-    }
-
-    private void registerError(String message) {
-        errorDetails.add(message);
     }
 
     private String trim(String str) {

@@ -171,8 +171,13 @@ public class Sucursal implements Runnable {
     private void procesarColas() {
         if (!colaIngreso.isEmpty()) {
             try {
-                Thread.sleep((long) (tIngreso * 1000));
-                colaIngreso.pop();
+                Product producto = colaIngreso.peek();
+                if (producto != null) {
+                    Thread.sleep((long) (tIngreso * 1000));
+                    colaIngreso.pop();
+                    producto.setEstado(Product.Estado.EN_TRANSITO);
+                    colaPreparacion.put(producto);
+                }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -180,8 +185,12 @@ public class Sucursal implements Runnable {
 
         if (!colaPreparacion.isEmpty()) {
             try {
-                Thread.sleep((long) (tTraspaso * 1000));
-                colaPreparacion.pop();
+                Product producto = colaPreparacion.peek();
+                if (producto != null) {
+                    Thread.sleep((long) (tTraspaso * 1000));
+                    colaPreparacion.pop();
+                    colaSalida.put(producto);
+                }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -189,8 +198,11 @@ public class Sucursal implements Runnable {
 
         if (!colaSalida.isEmpty()) {
             try {
-                Thread.sleep((long) (tDespacho * 1000));
-                colaSalida.pop();
+                Product producto = colaSalida.peek();
+                if (producto != null) {
+                    Thread.sleep((long) (tDespacho * 1000));
+                    colaSalida.pop();
+                }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }

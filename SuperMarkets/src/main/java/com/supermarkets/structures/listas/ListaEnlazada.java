@@ -86,6 +86,20 @@ public class ListaEnlazada {
         size = 0;
     }
 
+    public Product[] listarTodos() {
+        if (estaVacia()) {
+            return new Product[0];
+        }
+        Product[] resultado = new Product[size];
+        NodoList actual = cabeza;
+        int i = 0;
+        while (actual != null) {
+            resultado[i++] = actual.getDato();
+            actual = actual.getSiguiente();
+        }
+        return resultado;
+    }
+
     private void desvincularNodo(NodoList anterior, NodoList actual) {
         NodoList siguiente = actual.getSiguiente();
 
