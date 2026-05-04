@@ -1,1 +1,353 @@
-/* You can add global styles to this file, and also import other style files */
+/* Dark Theme Styles */
+body.dark-theme {
+  background-color: #1a1a2e;
+  color: #e0e0e0;
+}
+
+body.dark-theme .main-content {
+  background-color: #1a1a2e !important;
+}
+
+body.dark-theme .visualizacion-page,
+body.dark-theme .medicion-page,
+body.dark-theme .transferencia-page,
+body.dark-theme .productos-page,
+body.dark-theme .sucursales-page {
+  background-color: #1a1a2e;
+  color: #e0e0e0;
+}
+
+/* Headers and titles */
+body.dark-theme h1,
+body.dark-theme h2,
+body.dark-theme h3,
+body.dark-theme h4 {
+  color: #ffffff !important;
+}
+
+body.dark-theme p,
+body.dark-theme span,
+body.dark-theme label {
+  color: #d0d0d0;
+}
+
+/* All cards and panels - Override inline white backgrounds */
+body.dark-theme .medicion-form,
+body.dark-theme .resultados-section,
+body.dark-theme .bar-chart,
+body.dark-theme .empty-state,
+body.dark-theme .transfer-form,
+body.dark-theme .ruta-result,
+body.dark-theme .colas-section,
+body.dark-theme .cola-card,
+body.dark-theme .canvas-container,
+body.dark-theme .transferencias-panel,
+body.dark-theme .stats-panel,
+body.dark-theme .historial-panel,
+body.dark-theme .grafo-controls,
+body.dark-theme .estructura-info,
+body.dark-theme .hash-info,
+body.dark-theme .vista-placeholder,
+body.dark-theme .sucursales-grid,
+body.dark-theme .sucursal-card,
+body.dark-theme .card-header,
+body.dark-theme .card-body,
+body.dark-theme .card-actions,
+body.dark-theme .modal-content,
+body.dark-theme .productos-table,
+body.dark-theme .filters-bar,
+body.dark-theme .search-filters,
+body.dark-theme .bucket,
+body.dark-theme .transferencia-item,
+body.dark-theme .historial-item,
+body.dark-theme .loading {
+  background-color: #252542 !important;
+  color: #e0e0e0;
+}
+
+/* Nested elements */
+body.dark-theme .bar-label,
+body.dark-theme .bar-container {
+  background-color: #1a1a2e !important;
+}
+
+body.dark-theme .bar {
+  color: #ffffff;
+}
+
+/* Form inputs in cards */
+body.dark-theme .medicion-form input,
+body.dark-theme .medicion-form select,
+body.dark-theme .transfer-form input,
+body.dark-theme .transfer-form select,
+body.dark-theme .sucursal-card input,
+body.dark-theme .productos-table input,
+body.dark-theme .filters-bar input,
+body.dark-theme .search-filters input {
+  background-color: #1a1a2e !important;
+  color: #ffffff !important;
+  border-color: #444 !important;
+}
+
+/* Placeholders in inputs */
+body.dark-theme input::placeholder,
+body.dark-theme textarea::placeholder {
+  color: #888 !important;
+}
+
+/* Table styles */
+body.dark-theme table {
+  background-color: #252542 !important;
+}
+
+body.dark-theme th {
+  background-color: #1a1a2e !important;
+  color: #ffffff !important;
+}
+
+body.dark-theme td {
+  background-color: #252542 !important;
+  color: #d0d0d0 !important;
+  border-color: #333 !important;
+}
+
+body.dark-theme tr:hover {
+  background-color: #2d2d4a !important;
+}
+
+body.dark-theme tr.best {
+  background-color: #1a3a2a !important;
+}
+
+/* Code elements */
+body.dark-theme code {
+  background-color: #1a1a2e !important;
+  color: #ffffff !important;
+}
+
+/* Section headers */
+body.dark-theme .transferencias-panel h3,
+body.dark-theme .historial-panel h3 {
+  color: #ffffff !important;
+}
+
+/* Form controls */
+body.dark-theme select,
+body.dark-theme input[type="text"],
+body.dark-theme input[type="number"],
+body.dark-theme input[type="date"],
+body.dark-theme textarea {
+  background-color: #1a1a2e;
+  color: #ffffff;
+  border-color: #555;
+}
+
+body.dark-theme select:hover,
+body.dark-theme input:hover {
+  border-color: #3498db;
+}
+
+body.dark-theme select option {
+  background-color: #1a1a2e;
+  color: #ffffff;
+}
+
+/* Buttons */
+body.dark-theme .btn-primary {
+  background-color: #3498db;
+  color: #ffffff;
+}
+
+body.dark-theme .btn-primary:hover {
+  background-color: #2980b9;
+}
+
+body.dark-theme .btn-secondary,
+body.dark-theme .btn-cancel {
+  background-color: #444;
+  color: #ffffff;
+}
+
+body.dark-theme .btn-edit {
+  background-color: #f39c12;
+  color: #ffffff;
+}
+
+body.dark-theme .btn-delete {
+  background-color: #e74c3c;
+  color: #ffffff;
+}
+
+body.dark-theme .btn-transfer {
+  background-color: #27ae60;
+  color: #ffffff;
+}
+
+/* Progress bars */
+body.dark-theme .progress-bar {
+  background-color: #444;
+}
+
+body.dark-theme .cola-count {
+  color: #c0c0c0;
+}
+
+body.dark-theme .cola-count.active {
+  color: #ff6b6b;
+}
+
+/* Cola headers */
+body.dark-theme .cola-header.ingreso,
+body.dark-theme .cola-header.preparacion,
+body.dark-theme .cola-header.salida {
+  color: #ffffff;
+}
+
+/* Structure selector */
+body.dark-theme .estructura-selector label,
+body-dark-theme .control-group label {
+  color: #ffffff !important;
+}
+
+/* Hash buckets */
+body.dark-theme .bucket-index {
+  color: #ffffff !important;
+}
+
+body.dark-theme .bucket-count {
+  color: #c0c0c0;
+}
+
+body.dark-theme .bucket-count.tiene-elementos {
+  color: #ff6b6b !important;
+}
+
+/* Error and success messages */
+body.dark-theme .error-message {
+  background-color: #4a1515 !important;
+  border-color: #c0392b;
+  color: #ff8a8a;
+}
+
+body.dark-theme .success-message {
+  background-color: #1a3a2a !important;
+  border-color: #27ae60;
+  color: #6bffb0;
+}
+
+/* Radio options */
+body.dark-theme .radio-option span {
+  color: #d0d0d0 !important;
+}
+
+/* Route path */
+body.dark-theme .ruta-path {
+  background-color: #1a1a2e !important;
+}
+
+body.dark-theme .ruta-step {
+  color: #ffffff !important;
+}
+
+body.dark-theme .arrow {
+  color: #6db3f2 !important;
+}
+
+/* Modal overlay */
+body.dark-theme .modal {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Card icon */
+body.dark-theme .card-icon {
+  color: #ffffff;
+}
+
+/* Links */
+body.dark-theme a {
+  color: #6db3f2;
+}
+
+body.dark-theme a:hover {
+  color: #8fc9ff;
+}
+
+/* Scrollbar */
+body.dark-theme ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body-dark-theme ::-webkit-scrollbar-track {
+  background: #1a1a2e;
+}
+
+body.dark-theme ::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 4px;
+}
+
+body.dark-theme ::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Canvas background */
+body.dark-theme canvas {
+  background-color: #1a1a2e;
+}
+
+/* Header actions */
+body.dark-theme .header h1 {
+  color: #ffffff !important;
+}
+
+body.dark-theme .header-actions {
+  background-color: transparent;
+}
+
+/* Stats info in placeholder */
+body.dark-theme .estructura-info p,
+body.dark-theme .hash-info > p {
+  color: #d0d0d0 !important;
+}
+
+/* Select in search box */
+body-dark-theme .select-sucursal {
+  background-color: #1a1a2e !important;
+  color: #ffffff !important;
+}
+
+/* Filter group labels */
+body.dark-theme .filter-group label {
+  color: #d0d0d0 !important;
+}
+
+/* Table row actions */
+body-dark-theme .btn-edit-sm,
+body.dark-theme .btn-delete-sm {
+  color: #ffffff;
+}
+
+/* Card details */
+body.dark-theme .card-id {
+  color: #888 !important;
+}
+
+body.dark-theme .card-body p {
+  color: #d0d0d0 !important;
+}
+
+body-dark-theme .card-body strong {
+  color: #ffffff !important;
+}
+
+/* Empty states */
+body.dark-theme .empty-table {
+  background-color: #252542 !important;
+  color: #888 !important;
+}
+
+/* Loading */
+body.dark-theme .loading p {
+  color: #888 !important;
+}

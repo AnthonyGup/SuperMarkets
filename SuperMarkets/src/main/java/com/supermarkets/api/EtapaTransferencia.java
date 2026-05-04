@@ -1,0 +1,12 @@
+package com.supermarkets.api;
+
+public enum EtapaTransferencia {
+    COLA_SALIDA_ORIGEN,
+    VIAJE,
+    COLA_INGRESO_INTERMEDIA,
+    COLA_PREPARACION_INTERMEDIA,
+    COLA_SALIDA_INTERMEDIA,
+    VIAJE_SALIDA,
+    COLA_INGRESO_DESTINO,
+    ENTREGADO
+}

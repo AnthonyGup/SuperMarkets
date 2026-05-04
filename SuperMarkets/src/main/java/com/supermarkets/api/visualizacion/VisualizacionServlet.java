@@ -4,6 +4,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.supermarkets.api.GestorCentral;
 import com.supermarkets.api.GestorTransferencias;
+import com.supermarkets.api.TransferenciaActiva;
+import com.supermarkets.api.TransferenciaHistorial;
 import com.supermarkets.dto.ApiResponse;
 import com.supermarkets.pojo.ConexionSucursal;
 import com.supermarkets.pojo.Sucursal;
@@ -91,16 +93,16 @@ public class VisualizacionServlet extends HttpServlet {
         }
         resultado.put("conexiones", conexionesList);
 
-        List<GestorTransferencias.TransferenciaActiva> activas = gestorTransferencias.getTransferenciasActivas();
+        List<TransferenciaActiva> activas = gestorTransferencias.getTransferenciasActivas();
         List<Map<String, Object>> transferenciasActivas = new ArrayList<>();
-        for (GestorTransferencias.TransferenciaActiva t : activas) {
+        for (TransferenciaActiva t : activas) {
             transferenciasActivas.add(t.toMap());
         }
         resultado.put("transferenciasActivas", transferenciasActivas);
 
-        List<GestorTransferencias.TransferenciaHistorial> historial = gestorTransferencias.getHistorial();
+        List<TransferenciaHistorial> historial = gestorTransferencias.getHistorial();
         List<Map<String, Object>> historialDto = new ArrayList<>();
-        for (GestorTransferencias.TransferenciaHistorial h : historial) {
+        for (TransferenciaHistorial h : historial) {
             Map<String, Object> hData = new HashMap<>();
             hData.put("id", h.getId());
             hData.put("producto", h.getProductoNombre());

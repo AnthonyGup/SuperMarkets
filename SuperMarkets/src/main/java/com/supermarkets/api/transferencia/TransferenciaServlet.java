@@ -4,6 +4,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.supermarkets.api.GestorCentral;
 import com.supermarkets.api.GestorTransferencias;
+import com.supermarkets.api.TransferenciaActiva;
+import com.supermarkets.api.TransferenciaHistorial;
 import com.supermarkets.dto.ApiResponse;
 import com.supermarkets.pojo.Product;
 import com.supermarkets.pojo.Sucursal;
@@ -83,10 +85,10 @@ public class TransferenciaServlet extends HttpServlet {
     }
 
     private void verTransferenciasActivas(HttpServletRequest request, HttpServletResponse response, long startTime) throws IOException {
-        List<GestorTransferencias.TransferenciaActiva> activas = gestorTransferencias.getTransferenciasActivas();
+        List<TransferenciaActiva> activas = gestorTransferencias.getTransferenciasActivas();
 
         List<Map<String, Object>> activasDto = new ArrayList<>();
-        for (GestorTransferencias.TransferenciaActiva t : activas) {
+        for (TransferenciaActiva t : activas) {
             activasDto.add(t.toMap());
         }
 
@@ -96,10 +98,10 @@ public class TransferenciaServlet extends HttpServlet {
     }
 
     private void verHistorial(HttpServletRequest request, HttpServletResponse response, long startTime) throws IOException {
-        List<GestorTransferencias.TransferenciaHistorial> hist = gestorTransferencias.getHistorial();
+        List<TransferenciaHistorial> hist = gestorTransferencias.getHistorial();
 
         List<Map<String, Object>> histDto = new ArrayList<>();
-        for (GestorTransferencias.TransferenciaHistorial h : hist) {
+        for (TransferenciaHistorial h : hist) {
             Map<String, Object> dto = new HashMap<>();
             dto.put("id", h.getId());
             dto.put("producto", h.getProductoNombre());

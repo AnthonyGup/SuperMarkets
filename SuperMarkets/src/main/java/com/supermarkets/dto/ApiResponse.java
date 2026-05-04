@@ -1,7 +1,5 @@
 package com.supermarkets.dto;
 
-import java.util.List;
-
 public class ApiResponse<T> {
     private boolean success;
     private String message;
