@@ -14,11 +14,11 @@ export class SucursalService {
 
   constructor(private readonly http: HttpClient) {}
 
-  uploadCsv(file: File, csvType: 'sucursales' | 'conexiones' | 'catalogo'): Observable<any> {
+  uploadCsv(file: File, csvType: 'sucursales' | 'conexiones' | 'catalogo', hasHeader: boolean = true): Observable<any> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('csvType', csvType);
-    formData.append('hasHeader', 'true');
+    formData.append('hasHeader', hasHeader.toString());
     return this.http.post(this.uploadUrl, formData);
   }
 

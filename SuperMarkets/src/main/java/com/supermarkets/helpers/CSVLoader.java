@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -255,14 +256,12 @@ public class CSVLoader {
     }
 
     private void initErrorLog(Path sourceFile) throws IOException {
-        Path logDir = sourceFile.getParent();
-        if (logDir == null) {
-            logDir = Path.of(System.getProperty("java.io.tmpdir"));
-        }
+        Path projectRoot = Paths.get(System.getProperty("user.dir"));
+        Path logDir = projectRoot.resolve("logs");
+        Files.createDirectories(logDir);
 
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-        String fileName = sourceFile.getFileName().toString().replace(".csv", "");
-        this.currentLogPath = logDir.resolve("errors_" + fileName + "_" + timestamp + ".log");
+        this.currentLogPath = logDir.resolve("error_" + timestamp + ".log");
 
         Files.createFile(this.currentLogPath);
     }

@@ -29,6 +29,7 @@ com\supermarkets\structures\visualization\AvlTreeVisualizer.class
 com\supermarkets\api\TransferenciaActiva.class
 com\supermarkets\api\EtapaTransferencia.class
 com\supermarkets\utils\DotGenerator$Builder.class
+com\supermarkets\structures\visualization\HashTableVisualizer.class
 com\supermarkets\structures\b\ArbolB.class
 com\supermarkets\structures\grafo\NodoGrafo.class
 com\supermarkets\helpers\LoadStats.class
@@ -55,6 +56,7 @@ com\supermarkets\dto\ProductoDto.class
 com\supermarkets\api\TransferenciaHistorial.class
 com\supermarkets\pojo\Sucursal.class
 com\supermarkets\pojo\ConexionSucursal.class
+com\supermarkets\api\estructuras\EstructurasServlet.class
 com\supermarkets\structures\cola\Cola.class
 com\supermarkets\api\config\CorsFilter.class
 com\supermarkets\structures\bplus\ArbolBPlus.class

@@ -69,15 +69,7 @@ public class Product {
         return expiryDate;
     }
 
-    public String getExpiry_date() {
-        return expiryDate;
-    }
-
     public void setExpiryDate(String expiryDate) {
-        this.expiryDate = expiryDate;
-    }
-
-    public void setExpiry_date(String expiryDate) {
         this.expiryDate = expiryDate;
     }
 

@@ -29,6 +29,10 @@ public class NodoB {
     }
 
     public boolean nodoSemiVacio() {
+        return cuenta < (m + 1) / 2;
+    }
+
+    public boolean esHoja() {
         return ramas[0] == null;
     }
     

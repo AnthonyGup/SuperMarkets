@@ -40,7 +40,7 @@ interface CargaResult {
           </div>
           
           <div class="card-body">
-            <p class="formato-label">Formato esperado (primera línea = encabezado):</p>
+            <p class="formato-label">Formato esperado ({{ tieneEncabezado['sucursales'] ? 'primera línea = encabezado' : 'sin encabezado' }}):</p>
             <pre class="formato-csv">ID,Nombre,Ubicación,t_ingreso,t_traspaso,t_despacho
 SUC001,Zona 1 Guatemala,Ciudad de Guatemala,10,5,15</pre>
             
@@ -48,6 +48,13 @@ SUC001,Zona 1 Guatemala,Ciudad de Guatemala,10,5,15</pre>
               <label class="file-label">
                 <input type="file" (change)="onFileSelected($event, 'sucursales')" accept=".csv">
                 <span class="file-name">{{ archivos['sucursales']?.name || 'Seleccionar archivo CSV' }}</span>
+              </label>
+            </div>
+
+            <div class="header-toggle">
+              <label class="checkbox-label">
+                <input type="checkbox" [(ngModel)]="tieneEncabezado['sucursales']">
+                Primera línea es encabezado
               </label>
             </div>
 
@@ -78,7 +85,7 @@ SUC001,Zona 1 Guatemala,Ciudad de Guatemala,10,5,15</pre>
           </div>
           
           <div class="card-body">
-            <p class="formato-label">Formato esperado (primera línea = encabezado):</p>
+            <p class="formato-label">Formato esperado ({{ tieneEncabezado['conexiones'] ? 'primera línea = encabezado' : 'sin encabezado' }}):</p>
             <pre class="formato-csv">OrigenID,DestinoID,Tiempo,Costo
 SUC001,SUC002,15,50</pre>
             
@@ -86,6 +93,13 @@ SUC001,SUC002,15,50</pre>
               <label class="file-label">
                 <input type="file" (change)="onFileSelected($event, 'conexiones')" accept=".csv">
                 <span class="file-name">{{ archivos['conexiones']?.name || 'Seleccionar archivo CSV' }}</span>
+              </label>
+            </div>
+
+            <div class="header-toggle">
+              <label class="checkbox-label">
+                <input type="checkbox" [(ngModel)]="tieneEncabezado['conexiones']">
+                Primera línea es encabezado
               </label>
             </div>
 
@@ -116,7 +130,7 @@ SUC001,SUC002,15,50</pre>
           </div>
           
           <div class="card-body">
-            <p class="formato-label">Formato esperado (primera línea = encabezado):</p>
+            <p class="formato-label">Formato esperado ({{ tieneEncabezado['catalogo'] ? 'primera línea = encabezado' : 'sin encabezado' }}):</p>
             <pre class="formato-csv">SucursalID,Nombre,CodigoBarra,Categoria,FechaCaducidad,Marca,Precio,Stock
 SUC001,Leche Pil,7501234567891,Lacteos,2027-06-15,PIL,12.50,100</pre>
             
@@ -124,6 +138,13 @@ SUC001,Leche Pil,7501234567891,Lacteos,2027-06-15,PIL,12.50,100</pre>
               <label class="file-label">
                 <input type="file" (change)="onFileSelected($event, 'catalogo')" accept=".csv">
                 <span class="file-name">{{ archivos['catalogo']?.name || 'Seleccionar archivo CSV' }}</span>
+              </label>
+            </div>
+
+            <div class="header-toggle">
+              <label class="checkbox-label">
+                <input type="checkbox" [(ngModel)]="tieneEncabezado['catalogo']">
+                Primera línea es encabezado
               </label>
             </div>
 
@@ -181,6 +202,10 @@ SUC001,Leche Pil,7501234567891,Lacteos,2027-06-15,PIL,12.50,100</pre>
     .file-name { background: #3498db; color: white; padding: 10px 16px; border-radius: 6px; font-size: 13px; transition: background 0.2s; }
     .file-label:hover .file-name { background: #2980b9; }
 
+    .header-toggle { margin-bottom: 16px; }
+    .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: #555; }
+    .checkbox-label input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+
     .btn-upload { width: 100%; background: #3498db; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; transition: background 0.2s; }
     .btn-upload:hover:not(:disabled) { background: #2980b9; }
     .btn-upload:disabled { background: #bdc3c7; cursor: not-allowed; }
@@ -199,6 +224,12 @@ export class CargaCsvComponent {
     sucursales: null,
     conexiones: null,
     catalogo: null
+  };
+
+  tieneEncabezado: { [key: string]: boolean } = {
+    sucursales: true,
+    conexiones: true,
+    catalogo: true
   };
 
   cargando: { [key: string]: boolean } = {
@@ -235,7 +266,7 @@ export class CargaCsvComponent {
     this.resultados[tipo] = null;
     this.cdr.detectChanges();
 
-    this.sucursalService.uploadCsv(archivo, tipo as 'sucursales' | 'conexiones' | 'catalogo').subscribe({
+    this.sucursalService.uploadCsv(archivo, tipo as 'sucursales' | 'conexiones' | 'catalogo', this.tieneEncabezado[tipo]).subscribe({
       next: (res: any) => {
         this.resultados[tipo] = {
           success: res.success,

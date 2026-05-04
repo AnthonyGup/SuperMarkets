@@ -240,21 +240,10 @@ interface DotResponse {
     .estructura-selector label { font-size: 12px; color: #2c3e50; font-weight: 500; }
     .estructura-selector select { padding: 6px 10px; border: 1px solid #bdc3c7; border-radius: 4px; font-size: 12px; min-width: 200px; }
 
-    .hash-container { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .hash-container h2 { margin: 0 0 10px; color: #2c3e50; }
-    .hash-container > p { margin: 0 0 15px; color: #7f8c8d; font-size: 12px; }
-    .hash-buckets { display: flex; flex-wrap: wrap; gap: 5px; }
-    .bucket { display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: #f8f9fa; border-radius: 4px; font-size: 10px; }
-    .bucket-index { font-weight: bold; color: #2c3e50; }
-    .bucket-count { color: #7f8c8d; }
-    .bucket-count.tiene-elementos { color: #e74c3c; font-weight: bold; }
-    .bucket-elementos { display: flex; gap: 2px; }
-    .elemento { background: #3498db; color: white; padding: 2px 4px; border-radius: 2px; }
-
     .dot-container { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     .dot-container h2 { margin: 0 0 5px; color: #2c3e50; }
     .estructura-stats { margin: 0 0 15px; color: #7f8c8d; font-size: 12px; }
-    .dot-graph { display: flex; justify-content: center; align-items: center; min-height: 400px; }
+    .dot-graph { display: flex; justify-content: center; align-items: center; min-height: 400px; overflow-x: auto; }
     .dot-graph svg { max-width: 100%; height: auto; }
 
     .empty-state { background: white; border-radius: 8px; padding: 60px 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; margin-top: 20px; color: #7f8c8d; }

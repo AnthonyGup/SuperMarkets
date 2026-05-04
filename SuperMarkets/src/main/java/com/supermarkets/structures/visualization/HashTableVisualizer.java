@@ -40,32 +40,18 @@ public class HashTableVisualizer {
                 int count = 0;
                 while (actual != null) {
                     String clave = actual.getClave();
-                    if (clave != null && clave.length() > 8) {
-                        clave = clave.substring(0, 6) + "..";
+                    if (clave != null && clave.length() > 12) {
+                        clave = clave.substring(0, 10) + "..";
                     }
                     label.append(clave != null ? clave : "null");
                     if (actual.getSiguiente() != null) {
-                        label.append(" -> ");
+                        label.append("\n        -> ");
                     }
                     actual = actual.getSiguiente();
                     count++;
                 }
                 String color = count > 1 ? "orange" : "lightblue";
                 gen.addNode(bucketId, label.toString(), "box", color);
-
-                NodoHash chain = buckets[i].getSiguiente();
-                int chainNum = 1;
-                while (chain != null) {
-                    String chainId = bucketId + "_c" + chainNum;
-                    String clave = chain.getClave();
-                    if (clave != null && clave.length() > 8) {
-                        clave = clave.substring(0, 6) + "..";
-                    }
-                    gen.addNode(chainId, clave != null ? clave : "null", "box", "lightyellow");
-                    gen.addEdge(bucketId, chainId, "sig");
-                    chain = chain.getSiguiente();
-                    chainNum++;
-                }
             }
         }
 

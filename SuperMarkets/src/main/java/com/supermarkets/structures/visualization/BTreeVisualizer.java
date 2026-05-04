@@ -1,5 +1,6 @@
 package com.supermarkets.structures.visualization;
 
+import com.supermarkets.pojo.Product;
 import com.supermarkets.structures.b.NodoB;
 import com.supermarkets.utils.DotGenerator;
 
@@ -40,11 +41,12 @@ public class BTreeVisualizer {
 
     private int asignarIdsRecursivo(NodoB nodo, Map<NodoB, Integer> mapIds, int nivel) {
         if (nodo == null) return 0;
-        int count = nodo.Ocuenta();
-        for (int i = 0; i < nodo.Ocuenta(); i++) {
+        int count = 0;
+        if (!mapIds.containsKey(nodo)) {
             mapIds.put(nodo, mapIds.size() + 1);
+            count = 1;
         }
-        if (!esHoja(nodo)) {
+        if (!nodo.esHoja()) {
             for (int i = 0; i <= nodo.Ocuenta(); i++) {
                 NodoB hijo = nodo.Orama(i);
                 if (hijo != null) {
@@ -64,19 +66,25 @@ public class BTreeVisualizer {
         StringBuilder label = new StringBuilder();
         for (int i = 0; i < numClaves; i++) {
             if (i > 0) label.append(" | ");
-            String fecha = nodo.Oclave(i + 1).getExpiryDate();
-            if (fecha != null && fecha.length() > 8) {
-                fecha = fecha.substring(0, 8);
+            Product prod = nodo.Oclave(i + 1);
+            if (prod != null) {
+                String fecha = prod.getExpiryDate();
+                if (fecha != null) {
+                    label.append(fecha);
+                } else {
+                    label.append("-");
+                }
+            } else {
+                label.append("-");
             }
-            label.append(fecha);
         }
 
-        String color = esHoja(nodo) ? "lightgreen" : "lightblue";
+        String color = nodo.esHoja() ? "lightgreen" : "lightblue";
 
         int primerId = mapIds.get(nodo);
         gen.addNode(String.valueOf(primerId), label.toString(), "box", color);
 
-        if (!esHoja(nodo)) {
+        if (!nodo.esHoja()) {
             for (int i = 0; i <= nodo.Ocuenta(); i++) {
                 NodoB hijo = nodo.Orama(i);
                 if (hijo != null) {
@@ -87,7 +95,7 @@ public class BTreeVisualizer {
     }
 
     private void agregarAristasAlGenerador(NodoB nodo, DotGenerator gen, Map<NodoB, Integer> mapIds) {
-        if (nodo == null || esHoja(nodo)) return;
+        if (nodo == null || nodo.esHoja()) return;
 
         int padreId = mapIds.get(nodo);
 
@@ -101,13 +109,9 @@ public class BTreeVisualizer {
         }
     }
 
-    private boolean esHoja(NodoB nodo) {
-        return nodo.Orama(0) == null;
-    }
-
     private int calcularAltura(NodoB nodo) {
         if (nodo == null) return 0;
-        if (esHoja(nodo)) return 1;
+        if (nodo.esHoja()) return 1;
         return 1 + calcularAltura(nodo.Orama(0));
     }
 

@@ -73,7 +73,7 @@ public class Sucursal implements Runnable {
             if (producto != null) {
                 inventarioLista.eliminar(nombre);
                 inventarioHash.eliminar(producto.getBarcode());
-                inventarioB.eliminar(producto);
+                inventarioB.eliminar(producto.getExpiryDate());
                 inventarioBPlus.eliminar(producto.getCategory());
                 pilaCambios.push(producto);
                 return true;

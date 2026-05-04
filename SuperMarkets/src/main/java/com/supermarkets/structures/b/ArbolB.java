@@ -3,6 +3,7 @@ package com.supermarkets.structures.b;
 import com.supermarkets.pojo.Product;
 
 public class ArbolB {
+
     protected int orden;
     protected NodoB raiz;
 
@@ -104,7 +105,7 @@ public class ArbolB {
         int i = nodo.Ocuenta();
         String clave = producto.getExpiryDate();
 
-        if (nodo.nodoSemiVacio()) {
+        if (nodo.esHoja()) {
             while (i >= 1 && comparar(clave, nodo.Oclave(i).getExpiryDate()) < 0) {
                 nodo.Pclave(i + 1, nodo.Oclave(i));
                 i--;
@@ -186,7 +187,7 @@ public class ArbolB {
 
         boolean encontrado = k <= nodo.Ocuenta() && comparar(clave, nodo.Oclave(k).getExpiryDate()) == 0;
 
-        if (nodo.nodoSemiVacio()) {
+        if (nodo.esHoja()) {
             if (encontrado) {
                 for (int i = k; i < nodo.Ocuenta(); i++) {
                     nodo.Pclave(i, nodo.Oclave(i + 1));
@@ -196,11 +197,12 @@ public class ArbolB {
                 }
                 nodo.Pcuenta(nodo.Ocuenta() - 1);
             }
+            return nodo;
         } else {
             if (encontrado) {
                 if (nodo.Orama(k - 1) != null && nodo.Orama(k - 1).Ocuenta() > minClaves) {
                     NodoB pred = nodo.Orama(k - 1);
-                    while (pred != null && !pred.nodoSemiVacio()) {
+                    while (pred != null && !pred.nodoSemiVacio() && !pred.esHoja()) {
                         pred = pred.Orama(pred.Ocuenta());
                     }
                     Product predecesor = pred.Oclave(pred.Ocuenta());
@@ -208,7 +210,7 @@ public class ArbolB {
                     nodo.Prama(k - 1, eliminar(nodo.Orama(k - 1), predecesor.getExpiryDate()));
                 } else if (nodo.Orama(k) != null && nodo.Orama(k).Ocuenta() > minClaves) {
                     NodoB succ = nodo.Orama(k);
-                    while (succ != null && !succ.nodoSemiVacio()) {
+                    while (succ != null && !succ.nodoSemiVacio() && !succ.esHoja()) {
                         succ = succ.Orama(0);
                     }
                     Product sucesor = succ.Oclave(1);
@@ -219,22 +221,28 @@ public class ArbolB {
                     nodo.Prama(k - 1, eliminar(nodo.Orama(k - 1), clave));
                 }
             } else {
-                boolean esEnUltimo = k == nodo.Ocuenta() + 1;
+                boolean esUltimo = k > nodo.Ocuenta();
 
-                if (nodo.Orama(k) != null && nodo.Orama(k).Ocuenta() <= minClaves) {
-                    llenarNodo(nodo, k);
+                NodoB hijoActual = esUltimo ? nodo.Orama(k - 1) : nodo.Orama(k);
+
+                if (hijoActual != null && hijoActual.Ocuenta() < minClaves) {
+                    llenarNodo(nodo, esUltimo ? k - 1 : k);
                 }
 
-                if (esEnUltimo && k > nodo.Ocuenta()) {
+                if (esUltimo) {
                     nodo.Prama(k - 1, eliminar(nodo.Orama(k - 1), clave));
                 } else {
                     nodo.Prama(k, eliminar(nodo.Orama(k), clave));
                 }
             }
-        }
-        return nodo;
-    }
 
+            if (nodo.Orama(k - 1) != null && nodo.Orama(k - 1).Ocuenta() < minClaves) {
+                llenarNodo(nodo, k - 1);
+            }
+        }
+        return nodo ;
+    }
+    
     private void llenarNodo(NodoB nodo, int k) {
         int minClaves = (orden - 1) / 2;
 

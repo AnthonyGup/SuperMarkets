@@ -9,6 +9,7 @@ import com.supermarkets.structures.b.ArbolB;
 import com.supermarkets.structures.b.NodoB;
 import com.supermarkets.structures.bplus.ArbolBPlus;
 import com.supermarkets.structures.bplus.NodoBPlus;
+import com.supermarkets.structures.hash.NodoHash;
 import com.supermarkets.structures.hash.TablaHash;
 import com.supermarkets.structures.visualization.HashTableVisualizer;
 import com.supermarkets.structures.visualization.AvlTreeVisualizer;
